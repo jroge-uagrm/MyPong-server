@@ -14,20 +14,44 @@ public class Client {
     private ClientMainThread clientMainThread;
     private String host;
     private int port;
+    private String name;
+    private int c;
 
     public Client(String newHost, int newPort) {
         host = newHost;
         port = newPort;
+        name = "Client-";
+        c = 1;
     }
 
     public void connect() {
-        clientMainThread = new ClientMainThread(host, port) {
-            @Override
-            public void mainThreadLog(String msg) {
-                clientLog(msg);
-            }
-        };
-        new Thread(clientMainThread).start();
+        if(c <= 5)
+        {
+            clientMainThread = new ClientMainThread(host, port) {
+                @Override
+                public void onNewName(String newName) {
+                    name = newName;
+                    onChangeName();
+                }
+
+                @Override
+                public void onClientDisconnected() {
+                    onDisconnected();
+                }
+
+                @Override
+                public void onClientConnectionLost() {
+                    c++;
+                    connect();
+                }
+
+                @Override
+                public void mainThreadLog(String msg) {
+                    clientLog(msg);
+                }
+            };
+            new Thread(clientMainThread).start();
+        }
     }
 
     public void sendMessage(String msg) {
@@ -38,11 +62,21 @@ public class Client {
         clientMainThread.disconnect();
     }
 
+    public String getName() {
+        return name;
+    }
+
     public boolean getConnectedState() {
         return clientMainThread != null && clientMainThread.getConnectedStatus();
     }
 
     //Overridables
+    public void onChangeName() {
+    }
+
+    public void onDisconnected() {
+    }
+
     public void clientLog(String msg) {
     }
 }

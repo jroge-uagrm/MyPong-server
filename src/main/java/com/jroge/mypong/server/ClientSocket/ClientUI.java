@@ -5,6 +5,8 @@
  */
 package com.jroge.mypong.server.ClientSocket;
 
+import javax.swing.text.DefaultCaret;
+
 /**
  *
  * @author jroge
@@ -21,8 +23,18 @@ public class ClientUI extends javax.swing.JFrame {
      */
     public ClientUI() {
         initComponents();
-        txaLog.setCaretPosition(txaLog.getDocument().getLength());
+        setLogAlwaysOnTheButtom();
         client = new Client(host, port) {
+            @Override
+            public void onChangeName() {
+                refreshComponents();
+            }
+
+            @Override
+            public void onDisconnected() {
+                refreshComponents();
+            }
+
             @Override
             public void clientLog(String msg) {
                 log(msg);
@@ -47,8 +59,10 @@ public class ClientUI extends javax.swing.JFrame {
         txfMessage = new javax.swing.JTextField();
         jScrollPane2 = new javax.swing.JScrollPane();
         txaLog = new javax.swing.JTextArea();
+        lblName = new javax.swing.JLabel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+        setPreferredSize(new java.awt.Dimension(800, 400));
 
         btnDisconnect.setBackground(java.awt.Color.red);
         btnDisconnect.setText("Disconnect");
@@ -76,12 +90,16 @@ public class ClientUI extends javax.swing.JFrame {
             }
         });
 
-        txfMessage.setText("Hello there!");
+        txfMessage.setText("Hola");
 
         txaLog.setColumns(20);
         txaLog.setFont(new java.awt.Font("Fira Code", 0, 18)); // NOI18N
         txaLog.setRows(5);
+        txaLog.setFocusable(false);
         jScrollPane2.setViewportView(txaLog);
+
+        lblName.setFont(new java.awt.Font("Fira Code", 0, 24)); // NOI18N
+        lblName.setText("Client-");
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
@@ -92,28 +110,34 @@ public class ClientUI extends javax.swing.JFrame {
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(btnConnect, javax.swing.GroupLayout.PREFERRED_SIZE, 107, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 139, Short.MAX_VALUE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                         .addComponent(lblStatus)
-                        .addGap(120, 120, 120)
+                        .addGap(141, 141, 141)
                         .addComponent(btnDisconnect, javax.swing.GroupLayout.PREFERRED_SIZE, 107, javax.swing.GroupLayout.PREFERRED_SIZE))
-                    .addComponent(jScrollPane2))
+                    .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 614, Short.MAX_VALUE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(txfMessage)
-                    .addComponent(btnSendMessage, javax.swing.GroupLayout.DEFAULT_SIZE, 106, Short.MAX_VALUE))
+                    .addComponent(btnSendMessage, javax.swing.GroupLayout.DEFAULT_SIZE, 159, Short.MAX_VALUE))
                 .addContainerGap())
+            .addGroup(layout.createSequentialGroup()
+                .addGap(232, 232, 232)
+                .addComponent(lblName)
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
+                .addComponent(lblName)
+                .addGap(1, 1, 1)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(txfMessage, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(btnSendMessage, javax.swing.GroupLayout.PREFERRED_SIZE, 60, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addGap(0, 0, Short.MAX_VALUE))
-                    .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 304, Short.MAX_VALUE))
+                    .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 300, Short.MAX_VALUE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(btnDisconnect, javax.swing.GroupLayout.PREFERRED_SIZE, 44, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -179,16 +203,24 @@ public class ClientUI extends javax.swing.JFrame {
     private javax.swing.JButton btnDisconnect;
     private javax.swing.JButton btnSendMessage;
     private javax.swing.JScrollPane jScrollPane2;
+    private javax.swing.JLabel lblName;
     private javax.swing.JLabel lblStatus;
     private javax.swing.JTextArea txaLog;
     private javax.swing.JTextField txfMessage;
     // End of variables declaration//GEN-END:variables
 
+    private void setLogAlwaysOnTheButtom() {
+        DefaultCaret caret = (DefaultCaret) txaLog.getCaret();
+        caret.setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
+    }
+
     private void refreshComponents() {
         clientConnected = client.getConnectedState();
         btnConnect.setEnabled(!clientConnected);
         btnDisconnect.setEnabled(clientConnected);
-        lblStatus.setText(clientConnected ? "Connected" : "Disconnected");
+        btnSendMessage.setEnabled(clientConnected);
+        lblName.setText(client.getName());
+        lblStatus.setText(clientConnected ? "CONNECTED" : "DISCONNECTED");
     }
 
     private void log(String msg) {

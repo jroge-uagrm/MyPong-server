@@ -26,13 +26,8 @@ public class Server {
     public void start() {
         serverMainThread = new ServerMainThread(port) {
             @Override
-            public void onNewClientConnected(ServerClientThread newClient) {
+            public void onNewClientConnected(Socket newClient) {
                 addClientSocket(newClient);
-            }
-
-            @Override
-            public void onClientDisconnected(ServerClientThread disconnectedClient) {
-                removeClient(disconnectedClient);
             }
 
             @Override
@@ -45,16 +40,39 @@ public class Server {
 
     public void stop() {
         serverMainThread.stop();
+        for (ServerClientThread serverClientThread : connectedClientSockets) {
+            serverClientThread.stop();
+        }
     }
 
-    private void addClientSocket(ServerClientThread newClientSocket) {
-        connectedClientSockets.add(newClientSocket);
-        onNewClientConnected(newClientSocket);
+    private void addClientSocket(Socket clientSocket) {
+        String newClientName = "Client-" + Integer.toString(connectedClientSockets.size() + 1);
+        ServerClientThread newServerClientThread
+                = new ServerClientThread(clientSocket, newClientName) {
+            @Override
+            public void onConnected() {
+                onNewClientConnected(this);
+            }
+
+            @Override
+            public void onDisconnected() {
+                removeClient(this);
+            }
+
+            @Override
+            public void clientThreadLog(String msg) {
+                serverLog(msg);
+            }
+        };
+        connectedClientSockets.add(newServerClientThread);
+        new Thread(newServerClientThread).start();
+        refresh();
     }
 
     private void removeClient(ServerClientThread disconnectedClient) {
         connectedClientSockets.remove(disconnectedClient);
         onClientDisconnected(disconnectedClient);
+        refresh();
     }
 
     public int getConnectedClientSocketAmount() {
@@ -70,6 +88,9 @@ public class Server {
     }
 
     public void onClientDisconnected(ServerClientThread disconnectedClient) {
+    }
+
+    public void refresh() {
     }
 
     public void serverLog(String msg) {

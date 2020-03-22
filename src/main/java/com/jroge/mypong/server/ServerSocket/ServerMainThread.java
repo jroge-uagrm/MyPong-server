@@ -22,10 +22,11 @@ public class ServerMainThread implements Runnable {
             serverSocket = new ServerSocket(port);
             serverSocket.setReuseAddress(true);
             running = true;
-            mainThreadLog("MainThread:Running...");
+//            new Thread(this).start();
+            internalLog("Running...");
         } catch (Exception e) {
             running = false;
-            mainThreadLog("MainThread:ERROR on ServerMainThread constructor:"
+            internalLog("ERROR on ServerMainThread constructor:"
                     + e.getMessage());
         }
     }
@@ -34,44 +35,19 @@ public class ServerMainThread implements Runnable {
     public void run() {
         try {
             while (running) {
-                mainThreadLog("MainThread:Waiting a connection...");
+                internalLog("Waiting a connection...");
                 Socket client = serverSocket.accept();
-                createServerClientThread(client);
+                onNewClientConnected(client);
             }
         } catch (Exception e) {
             if (running) {
-                mainThreadLog("MainThread:ERROR on run:"
+                internalLog("ERROR on run:"
                         + e.getMessage());
                 stop();
             } else {
-                mainThreadLog("MainThread:Stopped.");
+                internalLog("Stopped.");
             }
         }
-    }
-
-    public void createServerClientThread(Socket clientSocket) {
-        mainThreadLog("MainThread:New client connected:" + clientSocket.getInetAddress().getHostAddress());
-        new ServerClientThread(clientSocket) {
-            @Override
-            public void onConnected() {
-                asignAThread(this);
-                onNewClientConnected(this);
-            }
-
-            @Override
-            public void onDisconnect() {
-                onClientDisconnected(this);
-            }
-
-            @Override
-            public void clientThreadLog(String msg) {
-                mainThreadLog(msg);
-            }
-        };
-    }
-
-    public void asignAThread(ServerClientThread newServerClientThread) {
-        new Thread(newServerClientThread).start();
     }
 
     public boolean getRunningState() {
@@ -84,18 +60,19 @@ public class ServerMainThread implements Runnable {
             try {
                 serverSocket.close();
             } catch (Exception e) {
-                mainThreadLog("MainThread:ERROR on stop" + e.getMessage());
+                internalLog("ERROR on stop" + e.getMessage());
             }
         } else {
-            mainThreadLog("MainThread:server is null");
+            internalLog("server is null");
         }
     }
 
-    //Overridables
-    public void onNewClientConnected(ServerClientThread newClient) {
+    private void internalLog(String msg) {
+        mainThreadLog("Server.thread:" + msg);
     }
 
-    public void onClientDisconnected(ServerClientThread disconnectedClient) {
+    //Overridables
+    public void onNewClientConnected(Socket newClient) {
     }
 
     public void mainThreadLog(String msg) {

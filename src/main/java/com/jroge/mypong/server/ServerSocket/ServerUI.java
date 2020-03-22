@@ -5,7 +5,7 @@
  */
 package com.jroge.mypong.server.ServerSocket;
 
-import java.net.Socket;
+import javax.swing.text.DefaultCaret;
 
 /**
  *
@@ -22,16 +22,11 @@ public class ServerUI extends javax.swing.JFrame {
      */
     public ServerUI() {
         initComponents();
-        txaLog.setCaretPosition(txaLog.getDocument().getLength());
+        setLogAlwaysOnTheButtom();
         serverRunnig = false;
         server = new Server(port) {
             @Override
-            public void onNewClientConnected(ServerClientThread newClient) {
-                refreshComponents();
-            }
-
-            @Override
-            public void onClientDisconnected(ServerClientThread disconnectedClient) {
+            public void refresh() {
                 refreshComponents();
             }
 
@@ -178,6 +173,11 @@ public class ServerUI extends javax.swing.JFrame {
     private javax.swing.JLabel lblStatus;
     private javax.swing.JTextArea txaLog;
     // End of variables declaration//GEN-END:variables
+
+    private void setLogAlwaysOnTheButtom() {
+        DefaultCaret caret = (DefaultCaret) txaLog.getCaret();
+        caret.setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
+    }
 
     private void refreshComponents() {
         serverRunnig = server.getRunningState();
