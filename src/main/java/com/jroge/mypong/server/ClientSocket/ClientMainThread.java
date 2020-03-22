@@ -43,7 +43,7 @@ public class ClientMainThread implements Runnable {
                 sendMessage();
                 printWriterOUT.flush();
                 String serverResponse = bufferedReaderIN.readLine();
-                mainThreadLog("Client:Server response:" + serverResponse);
+                mainThreadLog("MainThread:Message from server:" + serverResponse);
                 Thread.sleep(1000);
             }
         } catch (Exception e) {
@@ -52,7 +52,7 @@ public class ClientMainThread implements Runnable {
                         + e.getMessage());
                 disconnect();
             } else {
-                mainThreadLog("MainThread:Disconnected.");
+                mainThreadLog("MainThread:Disconnected.ERROR");
             }
         }
     }
@@ -74,7 +74,10 @@ public class ClientMainThread implements Runnable {
         connected = false;
         if (clientSocket != null) {
             try {
+                information = "Disconnected";
+                sendMessage();
                 clientSocket.close();
+                mainThreadLog("MainThread:Disconnected.");
             } catch (Exception e) {
                 mainThreadLog("MainThread:ERROR on disconnect" + e.getMessage());
             }

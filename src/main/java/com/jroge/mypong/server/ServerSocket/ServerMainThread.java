@@ -36,7 +36,7 @@ public class ServerMainThread implements Runnable {
             while (running) {
                 mainThreadLog("MainThread:Waiting a connection...");
                 Socket client = serverSocket.accept();
-                asignAThreadToClient(client);
+                createServerClientThread(client);
             }
         } catch (Exception e) {
             if (running) {
@@ -49,16 +49,29 @@ public class ServerMainThread implements Runnable {
         }
     }
 
-    public void asignAThreadToClient(Socket clientSocket) {
+    public void createServerClientThread(Socket clientSocket) {
         mainThreadLog("MainThread:New client connected:" + clientSocket.getInetAddress().getHostAddress());
-        ServerClientThread clientSock = new ServerClientThread(clientSocket) {
+        new ServerClientThread(clientSocket) {
+            @Override
+            public void onConnected() {
+                asignAThread(this);
+                onNewClientConnected(this);
+            }
+
+            @Override
+            public void onDisconnect() {
+                onClientDisconnected(this);
+            }
+
             @Override
             public void clientThreadLog(String msg) {
                 mainThreadLog(msg);
             }
         };
-        new Thread(clientSock).start();
-        onNewClientConnected(clientSocket);
+    }
+
+    public void asignAThread(ServerClientThread newServerClientThread) {
+        new Thread(newServerClientThread).start();
     }
 
     public boolean getRunningState() {
@@ -79,7 +92,10 @@ public class ServerMainThread implements Runnable {
     }
 
     //Overridables
-    public void onNewClientConnected(Socket clientSocket) {
+    public void onNewClientConnected(ServerClientThread newClient) {
+    }
+
+    public void onClientDisconnected(ServerClientThread disconnectedClient) {
     }
 
     public void mainThreadLog(String msg) {

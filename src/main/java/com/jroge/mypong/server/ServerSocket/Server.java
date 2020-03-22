@@ -16,7 +16,7 @@ public class Server {
 
     private ServerMainThread serverMainThread;
     private final int port;
-    private LinkedList<Socket> connectedClientSockets;
+    private LinkedList<ServerClientThread> connectedClientSockets;
 
     public Server(int newPort) {
         port = newPort;
@@ -26,8 +26,13 @@ public class Server {
     public void start() {
         serverMainThread = new ServerMainThread(port) {
             @Override
-            public void onNewClientConnected(Socket newClientSocket) {
-                addClientSocket(newClientSocket);
+            public void onNewClientConnected(ServerClientThread newClient) {
+                addClientSocket(newClient);
+            }
+
+            @Override
+            public void onClientDisconnected(ServerClientThread disconnectedClient) {
+                removeClient(disconnectedClient);
             }
 
             @Override
@@ -42,9 +47,14 @@ public class Server {
         serverMainThread.stop();
     }
 
-    private void addClientSocket(Socket newClientSocket) {
+    private void addClientSocket(ServerClientThread newClientSocket) {
         connectedClientSockets.add(newClientSocket);
         onNewClientConnected(newClientSocket);
+    }
+
+    private void removeClient(ServerClientThread disconnectedClient) {
+        connectedClientSockets.remove(disconnectedClient);
+        onClientDisconnected(disconnectedClient);
     }
 
     public int getConnectedClientSocketAmount() {
@@ -56,7 +66,10 @@ public class Server {
     }
 
     //Overridables
-    public void onNewClientConnected(Socket newClientSocket) {
+    public void onNewClientConnected(ServerClientThread newClient) {
+    }
+
+    public void onClientDisconnected(ServerClientThread disconnectedClient) {
     }
 
     public void serverLog(String msg) {

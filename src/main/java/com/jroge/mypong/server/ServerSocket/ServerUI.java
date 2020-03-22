@@ -22,10 +22,16 @@ public class ServerUI extends javax.swing.JFrame {
      */
     public ServerUI() {
         initComponents();
+        txaLog.setCaretPosition(txaLog.getDocument().getLength());
         serverRunnig = false;
         server = new Server(port) {
             @Override
-            public void onNewClientConnected(Socket newClientSocket) {
+            public void onNewClientConnected(ServerClientThread newClient) {
+                refreshComponents();
+            }
+
+            @Override
+            public void onClientDisconnected(ServerClientThread disconnectedClient) {
                 refreshComponents();
             }
 
@@ -48,10 +54,10 @@ public class ServerUI extends javax.swing.JFrame {
 
         btnStop = new javax.swing.JButton();
         btnStart = new javax.swing.JButton();
-        jScrollPane1 = new javax.swing.JScrollPane();
-        txaLog = new javax.swing.JTextArea();
         lblStatus = new javax.swing.JLabel();
         lblConnectedAmount = new javax.swing.JLabel();
+        jScrollPane2 = new javax.swing.JScrollPane();
+        txaLog = new javax.swing.JTextArea();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
@@ -71,15 +77,15 @@ public class ServerUI extends javax.swing.JFrame {
             }
         });
 
-        txaLog.setColumns(20);
-        txaLog.setFont(new java.awt.Font("Fira Code", 0, 18)); // NOI18N
-        txaLog.setRows(5);
-        jScrollPane1.setViewportView(txaLog);
-
         lblStatus.setText("STOPPED");
 
         lblConnectedAmount.setFont(new java.awt.Font("Cantarell", 0, 18)); // NOI18N
         lblConnectedAmount.setText("Connected amount:");
+
+        txaLog.setColumns(20);
+        txaLog.setFont(new java.awt.Font("Fira Code", 0, 18)); // NOI18N
+        txaLog.setRows(5);
+        jScrollPane2.setViewportView(txaLog);
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
@@ -94,7 +100,7 @@ public class ServerUI extends javax.swing.JFrame {
                         .addComponent(lblStatus)
                         .addGap(159, 159, 159)
                         .addComponent(btnStop, javax.swing.GroupLayout.PREFERRED_SIZE, 107, javax.swing.GroupLayout.PREFERRED_SIZE))
-                    .addComponent(jScrollPane1))
+                    .addComponent(jScrollPane2))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(lblConnectedAmount)
                 .addGap(44, 44, 44))
@@ -104,9 +110,11 @@ public class ServerUI extends javax.swing.JFrame {
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(lblConnectedAmount)
-                    .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 304, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addGroup(layout.createSequentialGroup()
+                        .addComponent(lblConnectedAmount)
+                        .addGap(0, 282, Short.MAX_VALUE))
+                    .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 304, Short.MAX_VALUE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(btnStop, javax.swing.GroupLayout.PREFERRED_SIZE, 44, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(btnStart, javax.swing.GroupLayout.PREFERRED_SIZE, 44, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -165,7 +173,7 @@ public class ServerUI extends javax.swing.JFrame {
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton btnStart;
     private javax.swing.JButton btnStop;
-    private javax.swing.JScrollPane jScrollPane1;
+    private javax.swing.JScrollPane jScrollPane2;
     private javax.swing.JLabel lblConnectedAmount;
     private javax.swing.JLabel lblStatus;
     private javax.swing.JTextArea txaLog;

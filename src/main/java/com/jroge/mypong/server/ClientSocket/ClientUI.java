@@ -21,6 +21,7 @@ public class ClientUI extends javax.swing.JFrame {
      */
     public ClientUI() {
         initComponents();
+        txaLog.setCaretPosition(txaLog.getDocument().getLength());
         client = new Client(host, port) {
             @Override
             public void clientLog(String msg) {
@@ -41,11 +42,11 @@ public class ClientUI extends javax.swing.JFrame {
 
         btnDisconnect = new javax.swing.JButton();
         btnConnect = new javax.swing.JButton();
-        jScrollPane1 = new javax.swing.JScrollPane();
-        txaLog = new javax.swing.JTextArea();
         lblStatus = new javax.swing.JLabel();
         btnSendMessage = new javax.swing.JButton();
         txfMessage = new javax.swing.JTextField();
+        jScrollPane2 = new javax.swing.JScrollPane();
+        txaLog = new javax.swing.JTextArea();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
@@ -65,11 +66,6 @@ public class ClientUI extends javax.swing.JFrame {
             }
         });
 
-        txaLog.setColumns(20);
-        txaLog.setFont(new java.awt.Font("Fira Code", 0, 18)); // NOI18N
-        txaLog.setRows(5);
-        jScrollPane1.setViewportView(txaLog);
-
         lblStatus.setText("Disconnected");
 
         btnSendMessage.setBackground(java.awt.Color.white);
@@ -82,6 +78,11 @@ public class ClientUI extends javax.swing.JFrame {
 
         txfMessage.setText("Hello there!");
 
+        txaLog.setColumns(20);
+        txaLog.setFont(new java.awt.Font("Fira Code", 0, 18)); // NOI18N
+        txaLog.setRows(5);
+        jScrollPane2.setViewportView(txaLog);
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
@@ -91,11 +92,11 @@ public class ClientUI extends javax.swing.JFrame {
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(btnConnect, javax.swing.GroupLayout.PREFERRED_SIZE, 107, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 139, Short.MAX_VALUE)
                         .addComponent(lblStatus)
                         .addGap(120, 120, 120)
                         .addComponent(btnDisconnect, javax.swing.GroupLayout.PREFERRED_SIZE, 107, javax.swing.GroupLayout.PREFERRED_SIZE))
-                    .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 562, Short.MAX_VALUE))
+                    .addComponent(jScrollPane2))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                     .addComponent(txfMessage)
@@ -110,9 +111,10 @@ public class ClientUI extends javax.swing.JFrame {
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(txfMessage, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(btnSendMessage, javax.swing.GroupLayout.PREFERRED_SIZE, 60, javax.swing.GroupLayout.PREFERRED_SIZE))
-                    .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 304, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addComponent(btnSendMessage, javax.swing.GroupLayout.PREFERRED_SIZE, 60, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(0, 0, Short.MAX_VALUE))
+                    .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 304, Short.MAX_VALUE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(btnDisconnect, javax.swing.GroupLayout.PREFERRED_SIZE, 44, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(btnConnect, javax.swing.GroupLayout.PREFERRED_SIZE, 44, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -176,7 +178,7 @@ public class ClientUI extends javax.swing.JFrame {
     private javax.swing.JButton btnConnect;
     private javax.swing.JButton btnDisconnect;
     private javax.swing.JButton btnSendMessage;
-    private javax.swing.JScrollPane jScrollPane1;
+    private javax.swing.JScrollPane jScrollPane2;
     private javax.swing.JLabel lblStatus;
     private javax.swing.JTextArea txaLog;
     private javax.swing.JTextField txfMessage;
