@@ -74,6 +74,11 @@ public class ClientUI extends javax.swing.JFrame {
 
         btnSendMessage.setBackground(java.awt.Color.white);
         btnSendMessage.setText("Send message");
+        btnSendMessage.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnSendMessageActionPerformed(evt);
+            }
+        });
 
         txfMessage.setText("Hello there!");
 
@@ -88,9 +93,9 @@ public class ClientUI extends javax.swing.JFrame {
                         .addComponent(btnConnect, javax.swing.GroupLayout.PREFERRED_SIZE, 107, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                         .addComponent(lblStatus)
-                        .addGap(82, 82, 82)
+                        .addGap(120, 120, 120)
                         .addComponent(btnDisconnect, javax.swing.GroupLayout.PREFERRED_SIZE, 107, javax.swing.GroupLayout.PREFERRED_SIZE))
-                    .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 452, Short.MAX_VALUE))
+                    .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 562, Short.MAX_VALUE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                     .addComponent(txfMessage)
@@ -112,7 +117,7 @@ public class ClientUI extends javax.swing.JFrame {
                     .addComponent(btnDisconnect, javax.swing.GroupLayout.PREFERRED_SIZE, 44, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(btnConnect, javax.swing.GroupLayout.PREFERRED_SIZE, 44, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(lblStatus))
-                .addGap(66, 66, 66))
+                .addContainerGap())
         );
 
         pack();
@@ -127,6 +132,10 @@ public class ClientUI extends javax.swing.JFrame {
         client.connect();
         refreshComponents();
     }//GEN-LAST:event_btnConnectActionPerformed
+
+    private void btnSendMessageActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnSendMessageActionPerformed
+        client.sendMessage(txfMessage.getText());
+    }//GEN-LAST:event_btnSendMessageActionPerformed
 
     /**
      * @param args the command line arguments

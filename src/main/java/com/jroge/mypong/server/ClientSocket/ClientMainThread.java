@@ -16,12 +16,16 @@ import java.net.Socket;
  */
 public class ClientMainThread implements Runnable {
 
-    private Socket socket;
+    private Socket clientSocket;
+    private PrintWriter printWriterOUT;
+    private BufferedReader bufferedReaderIN;
     private boolean connected;
+    private String information;
 
     public ClientMainThread(String host, int port) {
         try {
-            socket = new Socket(host, port);
+            clientSocket = new Socket(host, port);
+            information = "";
             connected = true;
             mainThreadLog("MainThread:Connected.");
         } catch (Exception e) {
@@ -33,13 +37,13 @@ public class ClientMainThread implements Runnable {
     @Override
     public void run() {
         try {
-            PrintWriter printWriterOUT = new PrintWriter(socket.getOutputStream(), true);
-            BufferedReader bufferedReaderIN = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            connected = true;
+            printWriterOUT = new PrintWriter(clientSocket.getOutputStream(), true);
+            bufferedReaderIN = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
             while (connected) {
-                printWriterOUT.println("ping from client");
+                sendMessage();
                 printWriterOUT.flush();
-                mainThreadLog("Client:Server response:" + bufferedReaderIN.readLine());
+                String serverResponse = bufferedReaderIN.readLine();
+                mainThreadLog("Client:Server response:" + serverResponse);
                 Thread.sleep(1000);
             }
         } catch (Exception e) {
@@ -53,9 +57,30 @@ public class ClientMainThread implements Runnable {
         }
     }
 
+    public void setInformation(String newInformation) {
+        information = newInformation;
+    }
+
+    private void sendMessage() {
+        if (information.equals("")) {
+            printWriterOUT.println("ping from client");
+        } else {
+            printWriterOUT.println(information);
+            information = "";
+        }
+    }
+
     public void disconnect() {
         connected = false;
-        mainThreadLog("MainThread:Trying disconnect");
+        if (clientSocket != null) {
+            try {
+                clientSocket.close();
+            } catch (Exception e) {
+                mainThreadLog("MainThread:ERROR on disconnect" + e.getMessage());
+            }
+        } else {
+            mainThreadLog("MainThread:clientSocket is null");
+        }
     }
 
     public boolean getConnectedStatus() {

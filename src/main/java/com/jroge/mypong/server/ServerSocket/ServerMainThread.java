@@ -40,7 +40,7 @@ public class ServerMainThread implements Runnable {
             }
         } catch (Exception e) {
             if (running) {
-                mainThreadLog("MainThread:ERROR on ServerMainThread run:"
+                mainThreadLog("MainThread:ERROR on run:"
                         + e.getMessage());
                 stop();
             } else {
@@ -51,7 +51,12 @@ public class ServerMainThread implements Runnable {
 
     public void asignAThreadToClient(Socket clientSocket) {
         mainThreadLog("MainThread:New client connected:" + clientSocket.getInetAddress().getHostAddress());
-        ServerClientThread clientSock = new ServerClientThread(clientSocket);
+        ServerClientThread clientSock = new ServerClientThread(clientSocket) {
+            @Override
+            public void clientThreadLog(String msg) {
+                mainThreadLog(msg);
+            }
+        };
         new Thread(clientSock).start();
         onNewClientConnected(clientSocket);
     }
@@ -69,7 +74,7 @@ public class ServerMainThread implements Runnable {
                 mainThreadLog("MainThread:ERROR on stop" + e.getMessage());
             }
         } else {
-            System.out.println("MainThread:server is null");
+            mainThreadLog("MainThread:server is null");
         }
     }
 

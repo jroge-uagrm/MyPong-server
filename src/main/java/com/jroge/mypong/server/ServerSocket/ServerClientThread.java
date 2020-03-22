@@ -6,7 +6,6 @@
 package com.jroge.mypong.server.ServerSocket;
 
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
@@ -17,38 +16,75 @@ import java.net.Socket;
  */
 public class ServerClientThread implements Runnable {
 
-    private final Socket clientSocket;
+    private Socket clientSocket;
+    private boolean running;
 
     public ServerClientThread(Socket socket) {
-        this.clientSocket = socket;
+        try {
+            clientSocket = socket;
+            running = true;
+            clientThreadLog("MainThread:Connected.");
+        } catch (Exception e) {
+            running = false;
+            clientThreadLog("MainThread:ERROR on constructor:" + e.getMessage());
+        }
     }
 
     @Override
     public void run() {
-        PrintWriter out = null;
-        BufferedReader in = null;
+        PrintWriter printerWriterOUT = null;
+        BufferedReader bufferedReaderIN = null;
         try {
-            out = new PrintWriter(clientSocket.getOutputStream(), true);
-            in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-            String line;
-            while ((line = in.readLine()) != null) {
-                System.out.printf("Sent from the client: %s\n", line);
-                out.println(line);
+            while (running) {
+                printerWriterOUT = new PrintWriter(clientSocket.getOutputStream(), true);
+                bufferedReaderIN = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+                String line;
+                while ((line = bufferedReaderIN.readLine()) != null) {
+                    clientThreadLog("ClientThread:New message:" + line);
+                    String msg = "Ping received";
+                    if (line.equals("Hola")) {
+                        msg = "Hola! como estas?";
+                    } else if (line.equals("Chau")) {
+                        msg = "No te vayas!! :(";
+                    }
+                    printerWriterOUT.println("ClientThread:" + msg);
+                }
             }
-        } catch (IOException e) {
-            e.printStackTrace();
+        } catch (Exception e) {
+            clientThreadLog(e.getMessage());
         } finally {
             try {
-                if (out != null) {
-                    out.close();
+                if (printerWriterOUT != null) {
+                    printerWriterOUT.close();
                 }
-                if (in != null) {
-                    in.close();
+                if (bufferedReaderIN != null) {
+                    bufferedReaderIN.close();
                 }
-                clientSocket.close();
-            } catch (IOException e) {
-                e.printStackTrace();
+                stop();
+            } catch (Exception e) {
+                if (running) {
+                    clientThreadLog("ClientThread:ERROR on run:" + e.getMessage());
+                } else {
+                    clientThreadLog("ClientThread:Stopped");
+                }
             }
         }
+    }
+
+    public void stop() {
+        running = false;
+        if (clientSocket != null) {
+            try {
+                clientSocket.close();
+            } catch (Exception e) {
+                clientThreadLog(e.getMessage());
+            }
+        } else {
+            clientThreadLog("ClientThread:clientSocket is null");
+        }
+    }
+
+    //Overridables
+    public void clientThreadLog(String msg) {
     }
 }
