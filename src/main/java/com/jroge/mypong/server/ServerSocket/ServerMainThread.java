@@ -14,16 +14,17 @@ import java.net.Socket;
  */
 public class ServerMainThread implements Runnable {
 
-    public ServerSocket server = null;
+    public ServerSocket serverSocket = null;
     protected boolean running;
 
     public ServerMainThread(int port) {
         try {
-            server = new ServerSocket(port);
-            server.setReuseAddress(true);
+            serverSocket = new ServerSocket(port);
+            serverSocket.setReuseAddress(true);
             running = true;
             mainThreadLog("MainThread:Running...");
         } catch (Exception e) {
+            running = false;
             mainThreadLog("MainThread:ERROR on ServerMainThread constructor:"
                     + e.getMessage());
         }
@@ -34,7 +35,7 @@ public class ServerMainThread implements Runnable {
         try {
             while (running) {
                 mainThreadLog("MainThread:Waiting a connection...");
-                Socket client = server.accept();
+                Socket client = serverSocket.accept();
                 asignAThreadToClient(client);
             }
         } catch (Exception e) {
@@ -61,9 +62,9 @@ public class ServerMainThread implements Runnable {
 
     public void stop() {
         running = false;
-        if (server != null) {
+        if (serverSocket != null) {
             try {
-                server.close();
+                serverSocket.close();
             } catch (Exception e) {
                 mainThreadLog("MainThread:ERROR on stop" + e.getMessage());
             }

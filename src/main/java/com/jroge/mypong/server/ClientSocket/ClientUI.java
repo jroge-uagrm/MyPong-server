@@ -3,34 +3,27 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package com.jroge.mypong.server.ServerSocket;
-
-import java.net.Socket;
+package com.jroge.mypong.server.ClientSocket;
 
 /**
  *
  * @author jroge
  */
-public class ServerUI extends javax.swing.JFrame {
+public class ClientUI extends javax.swing.JFrame {
 
-    private Server server;
+    private Client client;
+    private final String host = "127.0.0.1";
     private final int port = 32000;
-    private boolean serverRunnig;
+    private boolean clientConnected;
 
     /**
-     * Creates new form ServerUI
+     * Creates new form ClientUI
      */
-    public ServerUI() {
+    public ClientUI() {
         initComponents();
-        serverRunnig = false;
-        server = new Server(port) {
+        client = new Client(host, port) {
             @Override
-            public void onNewClientConnected(Socket newClientSocket) {
-                refreshComponents();
-            }
-
-            @Override
-            public void serverLog(String msg) {
+            public void clientLog(String msg) {
                 log(msg);
             }
         };
@@ -46,28 +39,29 @@ public class ServerUI extends javax.swing.JFrame {
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
 
-        btnStop = new javax.swing.JButton();
-        btnStart = new javax.swing.JButton();
+        btnDisconnect = new javax.swing.JButton();
+        btnConnect = new javax.swing.JButton();
         jScrollPane1 = new javax.swing.JScrollPane();
         txaLog = new javax.swing.JTextArea();
         lblStatus = new javax.swing.JLabel();
-        lblConnectedAmount = new javax.swing.JLabel();
+        btnSendMessage = new javax.swing.JButton();
+        txfMessage = new javax.swing.JTextField();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
-        btnStop.setBackground(java.awt.Color.red);
-        btnStop.setText("Stop");
-        btnStop.addActionListener(new java.awt.event.ActionListener() {
+        btnDisconnect.setBackground(java.awt.Color.red);
+        btnDisconnect.setText("Disconnect");
+        btnDisconnect.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btnStopActionPerformed(evt);
+                btnDisconnectActionPerformed(evt);
             }
         });
 
-        btnStart.setBackground(java.awt.Color.green);
-        btnStart.setText("Start");
-        btnStart.addActionListener(new java.awt.event.ActionListener() {
+        btnConnect.setBackground(java.awt.Color.green);
+        btnConnect.setText("Connect");
+        btnConnect.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btnStartActionPerformed(evt);
+                btnConnectActionPerformed(evt);
             }
         });
 
@@ -76,10 +70,12 @@ public class ServerUI extends javax.swing.JFrame {
         txaLog.setRows(5);
         jScrollPane1.setViewportView(txaLog);
 
-        lblStatus.setText("STOPPED");
+        lblStatus.setText("Disconnected");
 
-        lblConnectedAmount.setFont(new java.awt.Font("Cantarell", 0, 18)); // NOI18N
-        lblConnectedAmount.setText("Connected amount:");
+        btnSendMessage.setBackground(java.awt.Color.white);
+        btnSendMessage.setText("Send message");
+
+        txfMessage.setText("Hello there!");
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
@@ -89,43 +85,48 @@ public class ServerUI extends javax.swing.JFrame {
                 .addContainerGap()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(layout.createSequentialGroup()
-                        .addComponent(btnStart, javax.swing.GroupLayout.PREFERRED_SIZE, 107, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 163, Short.MAX_VALUE)
+                        .addComponent(btnConnect, javax.swing.GroupLayout.PREFERRED_SIZE, 107, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                         .addComponent(lblStatus)
-                        .addGap(159, 159, 159)
-                        .addComponent(btnStop, javax.swing.GroupLayout.PREFERRED_SIZE, 107, javax.swing.GroupLayout.PREFERRED_SIZE))
-                    .addComponent(jScrollPane1))
+                        .addGap(82, 82, 82)
+                        .addComponent(btnDisconnect, javax.swing.GroupLayout.PREFERRED_SIZE, 107, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 452, Short.MAX_VALUE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(lblConnectedAmount)
-                .addGap(44, 44, 44))
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                    .addComponent(txfMessage)
+                    .addComponent(btnSendMessage, javax.swing.GroupLayout.DEFAULT_SIZE, 106, Short.MAX_VALUE))
+                .addContainerGap())
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+            .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(lblConnectedAmount)
+                    .addGroup(layout.createSequentialGroup()
+                        .addComponent(txfMessage, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(btnSendMessage, javax.swing.GroupLayout.PREFERRED_SIZE, 60, javax.swing.GroupLayout.PREFERRED_SIZE))
                     .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 304, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(btnStop, javax.swing.GroupLayout.PREFERRED_SIZE, 44, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(btnStart, javax.swing.GroupLayout.PREFERRED_SIZE, 44, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(btnDisconnect, javax.swing.GroupLayout.PREFERRED_SIZE, 44, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(btnConnect, javax.swing.GroupLayout.PREFERRED_SIZE, 44, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(lblStatus))
-                .addContainerGap())
+                .addGap(66, 66, 66))
         );
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
-    private void btnStartActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnStartActionPerformed
-        server.start();
+    private void btnDisconnectActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnDisconnectActionPerformed
+        client.disconnect();
         refreshComponents();
-    }//GEN-LAST:event_btnStartActionPerformed
+    }//GEN-LAST:event_btnDisconnectActionPerformed
 
-    private void btnStopActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnStopActionPerformed
-        server.stop();
+    private void btnConnectActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnConnectActionPerformed
+        client.connect();
         refreshComponents();
-    }//GEN-LAST:event_btnStopActionPerformed
+    }//GEN-LAST:event_btnConnectActionPerformed
 
     /**
      * @param args the command line arguments
@@ -144,39 +145,39 @@ public class ServerUI extends javax.swing.JFrame {
                 }
             }
         } catch (ClassNotFoundException ex) {
-            java.util.logging.Logger.getLogger(ServerUI.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(ClientUI.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (InstantiationException ex) {
-            java.util.logging.Logger.getLogger(ServerUI.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(ClientUI.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (IllegalAccessException ex) {
-            java.util.logging.Logger.getLogger(ServerUI.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(ClientUI.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (javax.swing.UnsupportedLookAndFeelException ex) {
-            java.util.logging.Logger.getLogger(ServerUI.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(ClientUI.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         }
         //</editor-fold>
 
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
-                new ServerUI().setVisible(true);
+                new ClientUI().setVisible(true);
             }
         });
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JButton btnStart;
-    private javax.swing.JButton btnStop;
+    private javax.swing.JButton btnConnect;
+    private javax.swing.JButton btnDisconnect;
+    private javax.swing.JButton btnSendMessage;
     private javax.swing.JScrollPane jScrollPane1;
-    private javax.swing.JLabel lblConnectedAmount;
     private javax.swing.JLabel lblStatus;
     private javax.swing.JTextArea txaLog;
+    private javax.swing.JTextField txfMessage;
     // End of variables declaration//GEN-END:variables
 
     private void refreshComponents() {
-        serverRunnig = server.getRunningState();
-        btnStart.setEnabled(!serverRunnig);
-        btnStop.setEnabled(serverRunnig);
-        lblStatus.setText(serverRunnig ? "RUNNING" : "STOPPED");
-        lblConnectedAmount.setText("Connected amount:" + server.getConnectedClientSocketAmount());
+        clientConnected = client.getConnectedState();
+        btnConnect.setEnabled(!clientConnected);
+        btnDisconnect.setEnabled(clientConnected);
+        lblStatus.setText(clientConnected ? "Connected" : "Disconnected");
     }
 
     private void log(String msg) {

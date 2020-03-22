@@ -15,16 +15,12 @@ import java.util.LinkedList;
 public class Server {
 
     private ServerMainThread serverMainThread;
-    private int port;
+    private final int port;
     private LinkedList<Socket> connectedClientSockets;
 
     public Server(int newPort) {
         port = newPort;
-    }
-
-    private void addClientSocket(Socket newClientSocket) {
-        connectedClientSockets.add(newClientSocket);
-        onNewClientConnected(newClientSocket);
+        connectedClientSockets = new LinkedList<>();
     }
 
     public void start() {
@@ -39,12 +35,20 @@ public class Server {
                 serverLog(msg);
             }
         };
-        connectedClientSockets = new LinkedList<>();
         new Thread(serverMainThread).start();
     }
 
     public void stop() {
         serverMainThread.stop();
+    }
+
+    private void addClientSocket(Socket newClientSocket) {
+        connectedClientSockets.add(newClientSocket);
+        onNewClientConnected(newClientSocket);
+    }
+
+    public int getConnectedClientSocketAmount() {
+        return connectedClientSockets.size();
     }
 
     public boolean getRunningState() {
