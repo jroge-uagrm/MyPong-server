@@ -15,17 +15,14 @@ public class Client {
     private String host;
     private int port;
     private String name;
-    private int c;
 
     public Client(String newHost, int newPort) {
         host = newHost;
         port = newPort;
         name = "Client-";
-        c = 1;
     }
 
     public void connect() {
-        if(c <= 5)
         {
             clientMainThread = new ClientMainThread(host, port) {
                 @Override
@@ -41,7 +38,6 @@ public class Client {
 
                 @Override
                 public void onClientConnectionLost() {
-                    c++;
                     connect();
                 }
 

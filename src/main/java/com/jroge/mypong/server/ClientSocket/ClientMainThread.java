@@ -98,6 +98,7 @@ public class ClientMainThread implements Runnable {
                 internalLog("ERROR on disconnect" + e.getMessage());
             }
         }
+        onClientDisconnected();
     }
 
     private void tryToConnectToSocket() {
