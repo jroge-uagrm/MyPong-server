@@ -5,14 +5,19 @@
  */
 package com.jroge.mypong.server.ServerSocket;
 
+import java.net.Socket;
+import java.util.LinkedList;
+
 /**
  *
  * @author jroge
  */
 public class ServerUI extends javax.swing.JFrame {
 
+    private Server server;
+    private final int port = 32000;
     private boolean serverRunnig;
-    private MultiThreadServer multiThreadServer;
+    private LinkedList<String> clientNames;
 
     /**
      * Creates new form ServerUI
@@ -20,7 +25,20 @@ public class ServerUI extends javax.swing.JFrame {
     public ServerUI() {
         initComponents();
         serverRunnig = false;
-        refreshButtons();
+        clientNames = new LinkedList<>();
+        server = new Server(port) {
+            @Override
+            public void onNewClientConnected(Socket newClientSocket) {
+                clientNames.add(newClientSocket.toString());
+                refreshComponents();
+            }
+
+            @Override
+            public void serverLog(String msg) {
+                log(msg);
+            }
+        };
+        refreshComponents();
     }
 
     /**
@@ -37,11 +55,17 @@ public class ServerUI extends javax.swing.JFrame {
         jScrollPane1 = new javax.swing.JScrollPane();
         txaLog = new javax.swing.JTextArea();
         lblStatus = new javax.swing.JLabel();
+        lblConnectedAmount = new javax.swing.JLabel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
         btnStop.setBackground(java.awt.Color.red);
         btnStop.setText("Stop");
+        btnStop.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnStopActionPerformed(evt);
+            }
+        });
 
         btnStart.setBackground(java.awt.Color.green);
         btnStart.setText("Start");
@@ -52,10 +76,14 @@ public class ServerUI extends javax.swing.JFrame {
         });
 
         txaLog.setColumns(20);
+        txaLog.setFont(new java.awt.Font("Fira Code", 0, 18)); // NOI18N
         txaLog.setRows(5);
         jScrollPane1.setViewportView(txaLog);
 
         lblStatus.setText("STOPPED");
+
+        lblConnectedAmount.setFont(new java.awt.Font("Cantarell", 0, 18)); // NOI18N
+        lblConnectedAmount.setText("Connected amount:");
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
@@ -64,25 +92,29 @@ public class ServerUI extends javax.swing.JFrame {
             .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+                    .addGroup(layout.createSequentialGroup()
                         .addComponent(btnStart, javax.swing.GroupLayout.PREFERRED_SIZE, 107, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(115, 115, 115)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 163, Short.MAX_VALUE)
                         .addComponent(lblStatus)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 126, Short.MAX_VALUE)
+                        .addGap(159, 159, 159)
                         .addComponent(btnStop, javax.swing.GroupLayout.PREFERRED_SIZE, 107, javax.swing.GroupLayout.PREFERRED_SIZE))
                     .addComponent(jScrollPane1))
-                .addContainerGap())
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(lblConnectedAmount)
+                .addGap(44, 44, 44))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
                 .addContainerGap()
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 224, Short.MAX_VALUE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(lblConnectedAmount)
+                    .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 304, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(btnStop, javax.swing.GroupLayout.PREFERRED_SIZE, 44, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(lblStatus)
-                    .addComponent(btnStart, javax.swing.GroupLayout.PREFERRED_SIZE, 44, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(btnStart, javax.swing.GroupLayout.PREFERRED_SIZE, 44, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(lblStatus))
                 .addContainerGap())
         );
 
@@ -90,8 +122,14 @@ public class ServerUI extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void btnStartActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnStartActionPerformed
-        startServer();
+        server.start();
+        refreshComponents();
     }//GEN-LAST:event_btnStartActionPerformed
+
+    private void btnStopActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnStopActionPerformed
+        server.stop();
+        refreshComponents();
+    }//GEN-LAST:event_btnStopActionPerformed
 
     /**
      * @param args the command line arguments
@@ -132,25 +170,20 @@ public class ServerUI extends javax.swing.JFrame {
     private javax.swing.JButton btnStart;
     private javax.swing.JButton btnStop;
     private javax.swing.JScrollPane jScrollPane1;
+    private javax.swing.JLabel lblConnectedAmount;
     private javax.swing.JLabel lblStatus;
     private javax.swing.JTextArea txaLog;
     // End of variables declaration//GEN-END:variables
 
-    private void refreshButtons() {
+    private void refreshComponents() {
+        serverRunnig = server.getRunningState();
         btnStart.setEnabled(!serverRunnig);
         btnStop.setEnabled(serverRunnig);
-    }
-
-    private void startServer() {
-        try {
-            multiThreadServer = new MultiThreadServer();
-            serverRunnig = true;
-        } catch (Exception e) {
-            log(e.getMessage());
-        }
+        lblStatus.setText(serverRunnig ? "RUNNING" : "STOPPED");
+        lblConnectedAmount.setText("Connected amount:" + clientNames.size());
     }
 
     private void log(String msg) {
-        txaLog.append(msg);
+        txaLog.append(msg + '\n');
     }
 }
