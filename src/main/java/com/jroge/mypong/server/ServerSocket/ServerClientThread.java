@@ -22,22 +22,14 @@ public class ServerClientThread implements Runnable {
     private String name;
     private boolean running;
 
-    public ServerClientThread(Socket socket, String newName) {
-        try {
-            clientSocket = socket;
-            name = newName;
-            running = true;
-//            new Thread(this).start();
-            internalLog("New client connected:" + name);
-            onConnected();
-        } catch (Exception e) {
-            running = false;
-            internalLog("ERROR on constructor:" + e.getMessage());
-        }
+    public ServerClientThread(Socket socket) {
+        running = false;
+        clientSocket = socket;
     }
 
     @Override
     public void run() {
+        tryToConnectToSocket();
         printerWriterOUT = null;
         bufferedReaderIN = null;
         try {
@@ -52,34 +44,35 @@ public class ServerClientThread implements Runnable {
         } catch (Exception e) {
             if (running) {
                 internalLog("ERROR on run:" + e.getMessage());
-                stop();
-            } else {
-                internalLog("Disconnected.");
             }
         }
     }
 
-    public void manageMessage(String messageFromClient) {
+    private void tryToConnectToSocket() {
+        try {
+            running = true;
+            internalLog("New client connected.");
+            onConnected();
+        } catch (Exception e) {
+            running = false;
+            internalLog("ERROR on constructor:" + e.getMessage());
+        }
+    }
+
+    private void manageMessage(String messageFromClient) {
         String response = "Ping received";
         if (messageFromClient.equals("Disconnected")) {
-            stop();
-            onDisconnected();
+            disconnect();
         } else if (!messageFromClient.equals("ping from client")) {
-            if (messageFromClient.equals("asign me name")) {
-                response = "assigned name:" + name;
-            } else if (messageFromClient.equals("Hola")) {
-                response = "Hola! como estas?";
-            } else if (messageFromClient.equals("Chau")) {
-                response = "No te vayas!! :(";
-            }
             internalLog("New message:" + messageFromClient);
+            onNewMessage(messageFromClient);
         } else {
             internalLog("Ping done");
+            sendResponse(response);
         }
-        sendMessage(response);
     }
 
-    public void sendMessage(String msg) {
+    public void sendResponse(String msg) {
         try {
             if (!msg.equals("Ping received")) {
                 internalLog("Sending...:" + msg);
@@ -90,7 +83,7 @@ public class ServerClientThread implements Runnable {
         }
     }
 
-    public void stop() {
+    public void disconnect() {
         running = false;
         if (clientSocket != null) {
             try {
@@ -101,8 +94,10 @@ public class ServerClientThread implements Runnable {
                     bufferedReaderIN.close();
                 }
                 clientSocket.close();
+                internalLog("Disconnected.");
+                onDisconnected();
             } catch (Exception e) {
-                internalLog("ERROR on stop:" + e.getMessage());
+                internalLog("ERROR on disconnect:" + e.getMessage());
             }
         } else {
             internalLog("clientSocket is null");
@@ -113,12 +108,23 @@ public class ServerClientThread implements Runnable {
         return running;
     }
 
+    public void setName(String newName) {
+        name = newName;
+    }
+
+    public String getName() {
+        return name;
+    }
+
     private void internalLog(String msg) {
-        clientThreadLog(name + ".thread:" + msg);
+        clientThreadLog((name == null ? "unkwon" : name) + ".thread:" + msg);
     }
 
     //Overridables
     public void onConnected() {
+    }
+
+    public void onNewMessage(String msg) {
     }
 
     public void onDisconnected() {

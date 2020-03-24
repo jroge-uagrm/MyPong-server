@@ -5,6 +5,8 @@
  */
 package com.jroge.mypong.server.ServerSocket;
 
+import java.util.LinkedList;
+import java.util.Random;
 import javax.swing.text.DefaultCaret;
 
 /**
@@ -16,6 +18,7 @@ public class ServerUI extends javax.swing.JFrame {
     private Server server;
     private final int port = 32000;
     private boolean serverRunnig;
+    private LinkedList<ServerClientThread> connectedClientSockets;
 
     /**
      * Creates new form ServerUI
@@ -24,15 +27,50 @@ public class ServerUI extends javax.swing.JFrame {
         initComponents();
         setLogAlwaysOnTheButtom();
         serverRunnig = false;
+        connectedClientSockets = new LinkedList<>();
         server = new Server(port) {
             @Override
-            public void refresh() {
+            public void onStarted() {
+                refreshComponents();
+            }
+
+            @Override
+            public void onStopped() {
+                refreshComponents();
+            }
+
+            @Override
+            public void onClientConnected(ServerClientThread newClient) {
+                refreshComponents();
+            }
+
+            @Override
+            public void onClientNewMessage(ServerClientThread serverClientThread, String msg) {
+                String response = "Ping received";
+                if (msg.equals("asign me name")) {
+                    response = "assigned name:" + generateValidName();
+                } else if (msg.equals("Hola")) {
+                    response = "Hola! como estas?";
+                } else if (msg.equals("Chau")) {
+                    response = "No te vayas!! :(";
+                }
+                serverClientThread.sendResponse(response);
+            }
+
+            @Override
+            public void onClientDisconnected(ServerClientThread disconnectedClient) {
+                removeClient(disconnectedClient);
                 refreshComponents();
             }
 
             @Override
             public void serverLog(String msg) {
                 log(msg);
+            }
+
+            @Override
+            public void onNewClientConnected(ServerClientThread newClient) {
+                addClient(newClient);
             }
         };
         refreshComponents();
@@ -107,8 +145,8 @@ public class ServerUI extends javax.swing.JFrame {
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(lblConnectedAmount)
-                        .addGap(0, 282, Short.MAX_VALUE))
-                    .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 304, Short.MAX_VALUE))
+                        .addGap(0, 0, Short.MAX_VALUE))
+                    .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 306, Short.MAX_VALUE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(btnStop, javax.swing.GroupLayout.PREFERRED_SIZE, 44, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -122,12 +160,12 @@ public class ServerUI extends javax.swing.JFrame {
 
     private void btnStartActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnStartActionPerformed
         server.start();
-        refreshComponents();
     }//GEN-LAST:event_btnStartActionPerformed
 
     private void btnStopActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnStopActionPerformed
         server.stop();
-        refreshComponents();
+        disconnectAllServerClientThreads();
+        connectedClientSockets = new LinkedList<>();
     }//GEN-LAST:event_btnStopActionPerformed
 
     /**
@@ -179,12 +217,41 @@ public class ServerUI extends javax.swing.JFrame {
         caret.setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
     }
 
+    private void addClient(ServerClientThread newClient) {
+        connectedClientSockets.add(newClient);
+    }
+
+    private void removeClient(ServerClientThread disconnectedClient) {
+        connectedClientSockets.remove(disconnectedClient);
+    }
+
+    private String generateValidName() {
+        String newName = "";
+        Random rnd = new Random();
+        for (int i = 1; i <= 5; i++) {
+            newName += (char) (rnd.nextInt(25) + 65);
+            //newName += (char) (rnd.nextInt(122) + 97);
+        }
+        return newName;
+    }
+
+    private void disconnectAllServerClientThreads() {
+        for (ServerClientThread serverClientThread : connectedClientSockets) {
+            serverClientThread.disconnect();
+            System.out.println("D");
+        }
+    }
+
+    private int getConnectedClientAmount() {
+        return connectedClientSockets.size();
+    }
+
     private void refreshComponents() {
         serverRunnig = server.getRunningState();
         btnStart.setEnabled(!serverRunnig);
         btnStop.setEnabled(serverRunnig);
         lblStatus.setText(serverRunnig ? "RUNNING" : "STOPPED");
-        lblConnectedAmount.setText("Connected amount:" + server.getConnectedClientSocketAmount());
+        lblConnectedAmount.setText("Connected amount:" + getConnectedClientAmount());
     }
 
     private void log(String msg) {

@@ -6,7 +6,6 @@
 package com.jroge.mypong.server.ServerSocket;
 
 import java.net.Socket;
-import java.util.LinkedList;
 
 /**
  *
@@ -16,18 +15,26 @@ public class Server {
 
     private ServerMainThread serverMainThread;
     private final int port;
-    private LinkedList<ServerClientThread> connectedClientSockets;
 
     public Server(int newPort) {
         port = newPort;
-        connectedClientSockets = new LinkedList<>();
     }
 
     public void start() {
         serverMainThread = new ServerMainThread(port) {
             @Override
+            public void onServerStarted() {
+                onStarted();
+            }
+
+            @Override
             public void onNewClientConnected(Socket newClient) {
-                addClientSocket(newClient);
+                createServerClientThread(newClient);
+            }
+
+            @Override
+            public void onServerStopped() {
+                onStopped();
             }
 
             @Override
@@ -40,23 +47,24 @@ public class Server {
 
     public void stop() {
         serverMainThread.stop();
-        for (ServerClientThread serverClientThread : connectedClientSockets) {
-            serverClientThread.stop();
-        }
     }
 
-    private void addClientSocket(Socket clientSocket) {
-        String newClientName = "Client-" + Integer.toString(connectedClientSockets.size() + 1);
+    private void createServerClientThread(Socket clientSocket) {
         ServerClientThread newServerClientThread
-                = new ServerClientThread(clientSocket, newClientName) {
+                = new ServerClientThread(clientSocket) {
             @Override
             public void onConnected() {
-                onNewClientConnected(this);
+                onClientConnected(this);
             }
 
             @Override
             public void onDisconnected() {
-                removeClient(this);
+                onClientDisconnected(this);
+            }
+
+            @Override
+            public void onNewMessage(String msg) {
+                onClientNewMessage(this, msg);
             }
 
             @Override
@@ -64,19 +72,8 @@ public class Server {
                 serverLog(msg);
             }
         };
-        connectedClientSockets.add(newServerClientThread);
         new Thread(newServerClientThread).start();
-        refresh();
-    }
-
-    private void removeClient(ServerClientThread disconnectedClient) {
-        connectedClientSockets.remove(disconnectedClient);
-        onClientDisconnected(disconnectedClient);
-        refresh();
-    }
-
-    public int getConnectedClientSocketAmount() {
-        return connectedClientSockets.size();
+        onNewClientConnected(newServerClientThread);
     }
 
     public boolean getRunningState() {
@@ -84,16 +81,24 @@ public class Server {
     }
 
     //Overridables
-    public void onNewClientConnected(ServerClientThread newClient) {
+    public void onStarted() {
+    }
+
+    public void onStopped() {
+    }
+
+    public void onClientConnected(ServerClientThread connectedClient) {
+    }
+
+    public void onClientNewMessage(ServerClientThread clientSender, String msg) {
     }
 
     public void onClientDisconnected(ServerClientThread disconnectedClient) {
     }
 
-    public void refresh() {
-    }
-
     public void serverLog(String msg) {
     }
 
+    public void onNewClientConnected(ServerClientThread newServerClientThread) {
+    }
 }

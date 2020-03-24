@@ -26,12 +26,24 @@ public class ClientUI extends javax.swing.JFrame {
         setLogAlwaysOnTheButtom();
         client = new Client(host, port) {
             @Override
-            public void onChangeName() {
+            public void onConnected() {
                 refreshComponents();
             }
 
             @Override
+            public void onNewResponse(String response) {
+                if (response.contains("assigned name:")) {
+                    refreshName(response.split(":")[1]);
+                }
+            }
+
+            @Override
             public void onDisconnected() {
+                refreshComponents();
+            }
+
+            @Override
+            public void onTryingConnect() {
                 refreshComponents();
             }
 
@@ -214,13 +226,23 @@ public class ClientUI extends javax.swing.JFrame {
         caret.setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
     }
 
+    private void refreshName(String newName) {
+        lblName.setText(newName);
+    }
+
     private void refreshComponents() {
-        clientConnected = client.getConnectedState();
-        btnConnect.setEnabled(!clientConnected);
-        btnDisconnect.setEnabled(clientConnected);
-        btnSendMessage.setEnabled(clientConnected);
-        lblName.setText(client.getName());
-        lblStatus.setText(clientConnected ? "CONNECTED" : "DISCONNECTED");
+        if (client.isTryingConnect()) {
+            btnConnect.setEnabled(false);
+            btnDisconnect.setEnabled(false);
+            btnSendMessage.setEnabled(false);
+            lblStatus.setText("RECONNECTING...");
+        } else {
+            clientConnected = client.getConnectedState();
+            btnConnect.setEnabled(!clientConnected);
+            btnDisconnect.setEnabled(clientConnected);
+            btnSendMessage.setEnabled(clientConnected);
+            lblStatus.setText(clientConnected ? "CONNECTED" : "DISCONNECTED");
+        }
     }
 
     private void log(String msg) {

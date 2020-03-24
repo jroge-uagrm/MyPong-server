@@ -14,26 +14,33 @@ public class Client {
     private ClientMainThread clientMainThread;
     private String host;
     private int port;
-    private String name;
 
     public Client(String newHost, int newPort) {
         host = newHost;
         port = newPort;
-        name = "Client-";
     }
 
     public void connect() {
         {
             clientMainThread = new ClientMainThread(host, port) {
                 @Override
-                public void onNewName(String newName) {
-                    name = newName;
-                    onChangeName();
+                public void onClientConnected() {
+                    onConnected();
+                }
+
+                @Override
+                public void onClientNewResponse(String response) {
+                    onNewResponse(response);
                 }
 
                 @Override
                 public void onClientDisconnected() {
                     onDisconnected();
+                }
+
+                @Override
+                public void onClientTryingConnect() {
+                    onTryingConnect();
                 }
 
                 @Override
@@ -50,27 +57,33 @@ public class Client {
         }
     }
 
-    public void sendMessage(String msg) {
-        clientMainThread.setInformation(msg);
-    }
-
     public void disconnect() {
         clientMainThread.disconnect();
     }
 
-    public String getName() {
-        return name;
+    public void sendMessage(String msg) {
+        clientMainThread.setInformation(msg);
     }
 
     public boolean getConnectedState() {
-        return clientMainThread != null && clientMainThread.getConnectedStatus();
+        return clientMainThread != null && clientMainThread.isConnected();
+    }
+
+    public boolean isTryingConnect() {
+        return clientMainThread != null && clientMainThread.isTryingConnect();
     }
 
     //Overridables
-    public void onChangeName() {
+    public void onConnected() {
+    }
+
+    public void onNewResponse(String response) {
     }
 
     public void onDisconnected() {
+    }
+
+    public void onTryingConnect() {
     }
 
     public void clientLog(String msg) {
