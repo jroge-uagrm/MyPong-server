@@ -46,7 +46,6 @@ public class ServerClientThread implements Runnable {
                 bufferedReaderIN = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
                 String line;
                 while ((line = bufferedReaderIN.readLine()) != null) {
-                    internalLog("New message:" + line);
                     manageMessage(line);
                 }
             }
@@ -65,7 +64,7 @@ public class ServerClientThread implements Runnable {
         if (messageFromClient.equals("Disconnected")) {
             stop();
             onDisconnected();
-        } else {
+        } else if (!messageFromClient.equals("ping from client")) {
             if (messageFromClient.equals("asign me name")) {
                 response = "assigned name:" + name;
             } else if (messageFromClient.equals("Hola")) {
@@ -73,13 +72,18 @@ public class ServerClientThread implements Runnable {
             } else if (messageFromClient.equals("Chau")) {
                 response = "No te vayas!! :(";
             }
-            sendMessage(response);
+            internalLog("New message:" + messageFromClient);
+        } else {
+            internalLog("Ping done");
         }
+        sendMessage(response);
     }
 
     public void sendMessage(String msg) {
         try {
-            internalLog("Sending...:" + msg);
+            if (!msg.equals("Ping received")) {
+                internalLog("Sending...:" + msg);
+            }
             printerWriterOUT.println(msg);
         } catch (Exception e) {
             internalLog("ERROR on sendMessage:" + e.getMessage());
