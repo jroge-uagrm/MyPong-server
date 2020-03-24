@@ -58,6 +58,7 @@ public class ClientMainThread implements Runnable {
     private void manageMessage() {
         try {
             String serverResponse = bufferedReaderIN.readLine();
+            //Linux
             if (serverResponse == null) {
                 internalLog("Connection lost.");
                 connected = false;//OK!!
@@ -69,7 +70,11 @@ public class ClientMainThread implements Runnable {
                 }
             }
         } catch (Exception e) {
+            //Windows
             internalLog("ERROR on manageMessage:" + e.getMessage());
+            internalLog("Connection lost.");
+            connected = false;//OK!!
+            onClientConnectionLost();
         }
     }
 
