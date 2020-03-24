@@ -14,28 +14,19 @@ import java.net.Socket;
  */
 public class ServerMainThread implements Runnable {
 
-    public ServerSocket serverSocket = null;
+    private ServerSocket serverSocket = null;
+    private int port;
     protected boolean running;
 
-    public ServerMainThread(int port) {
-        try {
-            serverSocket = new ServerSocket(port);
-            serverSocket.setReuseAddress(true);
-            running = true;
-//            new Thread(this).start();
-            internalLog("Running...");
-        } catch (Exception e) {
-            running = false;
-            internalLog("ERROR on ServerMainThread constructor:"
-                    + e.getMessage());
-        }
+    public ServerMainThread(int newPort) {
+        port = newPort;
     }
 
     @Override
     public void run() {
+        tryToConnectToSocket();
         try {
             while (running) {
-                internalLog("Waiting a connection...");
                 Socket client = serverSocket.accept();
                 onNewClientConnected(client);
             }
@@ -43,10 +34,21 @@ public class ServerMainThread implements Runnable {
             if (running) {
                 internalLog("ERROR on run:"
                         + e.getMessage());
-                stop();
-            } else {
-                internalLog("Stopped.");
             }
+        }
+    }
+
+    private void tryToConnectToSocket() {
+        try {
+            serverSocket = new ServerSocket(port);
+            serverSocket.setReuseAddress(true);
+            running = true;
+            internalLog("Running...");
+            onServerStarted();
+        } catch (Exception e) {
+            running = false;
+            internalLog("ERROR on ServerMainThread constructor:"
+                    + e.getMessage());
         }
     }
 
@@ -59,12 +61,14 @@ public class ServerMainThread implements Runnable {
         if (serverSocket != null) {
             try {
                 serverSocket.close();
+                internalLog("Stopped.");
             } catch (Exception e) {
                 internalLog("ERROR on stop" + e.getMessage());
             }
         } else {
             internalLog("server is null");
         }
+        onServerStopped();
     }
 
     private void internalLog(String msg) {
@@ -72,7 +76,13 @@ public class ServerMainThread implements Runnable {
     }
 
     //Overridables
+    public void onServerStarted() {
+    }
+
     public void onNewClientConnected(Socket newClient) {
+    }
+
+    public void onServerStopped() {
     }
 
     public void mainThreadLog(String msg) {
