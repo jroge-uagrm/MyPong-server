@@ -22,9 +22,9 @@ public class ClientMainThread implements Runnable {
     private PrintWriter printWriterOUT;
     private BufferedReader bufferedReaderIN;
     private boolean connected;
-    private boolean tryingConnect;
     private String information;
     private int connectionAttempts;
+    private boolean tryingConnect;
     private final int MAX_RECONNECTION_ATTEMPS = 5;
     private final int TIME_BETWEEN_RECONNECTIONS = 3;
     private final int TIME_BETWEEN_PINGS = 2;
@@ -32,11 +32,12 @@ public class ClientMainThread implements Runnable {
     public ClientMainThread(String newHost, int newPort) {
         host = newHost;
         port = newPort;
-        connected = tryingConnect = false;
+        connected = false;
     }
 
     @Override
     public void run() {
+        tryingConnect = true;
         tryToConnectToSocket();
         try {
             printWriterOUT = new PrintWriter(clientSocket.getOutputStream(), true);
@@ -44,7 +45,7 @@ public class ClientMainThread implements Runnable {
             while (connected) {
                 sendMessage();
                 printWriterOUT.flush();
-                manageResponse();
+                manageMessage();
                 Thread.sleep(TIME_BETWEEN_PINGS * 1000);
             }
         } catch (Exception e) {
@@ -56,28 +57,24 @@ public class ClientMainThread implements Runnable {
         }
     }
 
-    private void manageResponse() {
+    private void manageMessage() {
         try {
             String serverResponse = bufferedReaderIN.readLine();
-            //Linux Disconnected begin
+            //Linux
             if (serverResponse == null) {
                 internalLog("Connection lost.");
                 connected = false;
                 onClientConnectionLost();
-            } //Linux Disconnected end
-            else {
-                if (!serverResponse.equals("Ping received")) {
-                    internalLog("Message from server:" + serverResponse);
-                    onClientNewResponse(serverResponse);
-                }
+            } else {
+                internalLog("Message from server:" + serverResponse);
+                onClientNewResponse(serverResponse);
             }
         } catch (Exception e) {
-            //Windows Disconnected begin
+            //Windows
             internalLog("ERROR on manageMessage:" + e.getMessage());
             internalLog("Connection lost.");
-            connected = false;
+            connected = false;//OK!!
             onClientConnectionLost();
-            //Windows Disconnected end
         }
     }
 
@@ -88,65 +85,59 @@ public class ClientMainThread implements Runnable {
     private void sendMessage() {
         if (connectionAttempts == 0) {
             printWriterOUT.println(information);
-            if (!information.equals("ping from client")) {
-                internalLog("Sending...:" + information);
-            }
-            information = "ping from client";
+            internalLog("Sending...:" + information);
         }
     }
 
     public void disconnect() {
         connected = false;
+        tryingConnect = false;
+        connectionAttempts = 0;
         if (clientSocket != null) {
             try {
                 information = "Disconnected";
                 sendMessage();
                 clientSocket.close();
-                internalLog("Disconnected.");
             } catch (Exception e) {
                 internalLog("ERROR on disconnect" + e.getMessage());
             }
         }
+        internalLog("Disconnected.");
         onClientDisconnected();
     }
 
     private void tryToConnectToSocket() {
-        connectionAttempts++;
-        try {
-            clientSocket = new Socket(host, port);
-            information = "asign me name";
-            connected = true;
-            tryingConnect = false;
-            connectionAttempts = 0;
-            internalLog("Connected.");
-            onClientConnected();
-        } catch (Exception ex) {
-            internalLog("Unable to connect.");
-            connected = false;
-            if (connectionAttempts <= MAX_RECONNECTION_ATTEMPS) {
-                tryingConnect = true;
-                onClientTryingConnect();
-                internalLog("Reconnecting... " + connectionAttempts + "/" + MAX_RECONNECTION_ATTEMPS + " attempt(s)");
-                try {
-                    Thread.sleep(TIME_BETWEEN_RECONNECTIONS * 1000);
-                } catch (Exception e) {
-                    internalLog("ERROR on connectToSocket:" + e.getMessage());
+        if (tryingConnect) {
+            connectionAttempts++;
+            try {
+                clientSocket = new Socket(host, port);
+                connected = true;
+                information = "asign me name";
+                connectionAttempts = 0;
+                internalLog("Connected.");
+                onClientConnected();
+            } catch (Exception ex) {
+                connected = false;
+                internalLog("Unable to connect.");
+                if (connectionAttempts <= MAX_RECONNECTION_ATTEMPS) {
+                    onClientTryingReconnect();
+                    internalLog("Reconnecting... " + connectionAttempts + "/" + MAX_RECONNECTION_ATTEMPS + " attempt(s)");
+                    try {
+                        Thread.sleep(TIME_BETWEEN_RECONNECTIONS * 1000);
+                    } catch (Exception e) {
+                        internalLog("ERROR on connectToSocket:" + e.getMessage());
+                    }
+                    tryToConnectToSocket();
+                } else {
+                    disconnect();
                 }
-                tryToConnectToSocket();
-            } else {
-                tryingConnect = false;
-                disconnect();
             }
         }
 
     }
 
-    public boolean isConnected() {
-        return connected;
-    }
-
-    public boolean isTryingConnect() {
-        return tryingConnect;
+    public boolean getConnectedStatus() {
+        return connected || tryingConnect;
     }
 
     private void internalLog(String msg) {
@@ -157,13 +148,13 @@ public class ClientMainThread implements Runnable {
     public void onClientConnected() {
     }
 
-    public void onClientNewResponse(String msg) {
+    public void onClientNewResponse(String response) {
+    }
+
+    public void onClientTryingReconnect() {
     }
 
     public void onClientDisconnected() {
-    }
-
-    public void onClientTryingConnect() {
     }
 
     public void onClientConnectionLost() {

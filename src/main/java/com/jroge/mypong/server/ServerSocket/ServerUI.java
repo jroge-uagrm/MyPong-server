@@ -15,62 +15,75 @@ import javax.swing.text.DefaultCaret;
  */
 public class ServerUI extends javax.swing.JFrame {
 
-    private Server server;
+    private final Server server;
     private final int port = 32000;
     private boolean serverRunnig;
-    private LinkedList<ServerClientThread> connectedClientSockets;
+    private LinkedList<MyPongClient> connectedMyPongClients;
 
     /**
      * Creates new form ServerUI
      */
     public ServerUI() {
         initComponents();
-        setLogAlwaysOnTheButtom();
+        connectedMyPongClients = new LinkedList<>();
+        setLogsAlwaysOnTheButtom();
         serverRunnig = false;
-        connectedClientSockets = new LinkedList<>();
         server = new Server(port) {
             @Override
-            public void onStarted() {
+            public void onServerStarted() {
                 refreshComponents();
             }
 
             @Override
-            public void onStopped() {
+            public void onServerStopped() {
                 refreshComponents();
             }
 
             @Override
-            public void onClientConnected(ServerClientThread newClient) {
+            public void onClientConnected(ServerClientThread connectedClient) {
+                connectedMyPongClients.add(new MyPongClient(
+                        connectedClient
+                ));
                 refreshComponents();
             }
 
             @Override
-            public void onClientNewMessage(ServerClientThread serverClientThread, String msg) {
-                String response = "Ping received";
-                if (msg.equals("asign me name")) {
-                    response = "assigned name:" + generateValidName();
-                } else if (msg.equals("Hola")) {
-                    response = "Hola! como estas?";
-                } else if (msg.equals("Chau")) {
-                    response = "No te vayas!! :(";
+            public void onNewMessageFromClient(ServerClientThread serverClientThread, String messageFromClient) {
+                String response = "Ping";
+                if (messageFromClient.equals("Disconnected")) {
+                    serverClientThread.disconnect();
+                } else if (!messageFromClient.equals("pinging")) {
+                    serverClientThread.internalLog("New message:" + messageFromClient);
+                    if (messageFromClient.equals("asign me name")) {
+                        String newName = generateName();
+                        getMyPongClient(serverClientThread).setName(newName);
+                        response = "assigned name:" + newName;
+                    } else if (messageFromClient.equals("Hola")) {
+                        response = "Hola! como estas?";
+                    } else if (messageFromClient.equals("Chau")) {
+                        response = "No te vayas!! :(";
+                    }
+                } else {
+                    serverClientThread.internalLog("Ping");
                 }
-                serverClientThread.sendResponse(response);
+                serverClientThread.sendMessage(response);
             }
 
             @Override
             public void onClientDisconnected(ServerClientThread disconnectedClient) {
+                System.out.println(disconnectedClient.hashCode());
                 removeClient(disconnectedClient);
                 refreshComponents();
             }
 
             @Override
-            public void serverLog(String msg) {
-                log(msg);
+            public void onServerLog(String msg) {
+                serverLog(msg);
             }
 
             @Override
-            public void onNewClientConnected(ServerClientThread newClient) {
-                addClient(newClient);
+            public void onClientsLog(String msg) {
+                clientsLog(msg);
             }
         };
         refreshComponents();
@@ -90,7 +103,9 @@ public class ServerUI extends javax.swing.JFrame {
         lblStatus = new javax.swing.JLabel();
         lblConnectedAmount = new javax.swing.JLabel();
         jScrollPane2 = new javax.swing.JScrollPane();
-        txaLog = new javax.swing.JTextArea();
+        txaServerLog = new javax.swing.JTextArea();
+        jScrollPane3 = new javax.swing.JScrollPane();
+        txaClientsLog = new javax.swing.JTextArea();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
@@ -115,10 +130,15 @@ public class ServerUI extends javax.swing.JFrame {
         lblConnectedAmount.setFont(new java.awt.Font("Cantarell", 0, 18)); // NOI18N
         lblConnectedAmount.setText("Connected amount:");
 
-        txaLog.setColumns(20);
-        txaLog.setFont(new java.awt.Font("Fira Code", 0, 18)); // NOI18N
-        txaLog.setRows(5);
-        jScrollPane2.setViewportView(txaLog);
+        txaServerLog.setColumns(20);
+        txaServerLog.setFont(new java.awt.Font("Fira Code", 0, 18)); // NOI18N
+        txaServerLog.setRows(5);
+        jScrollPane2.setViewportView(txaServerLog);
+
+        txaClientsLog.setColumns(20);
+        txaClientsLog.setFont(new java.awt.Font("Fira Code", 0, 18)); // NOI18N
+        txaClientsLog.setRows(5);
+        jScrollPane3.setViewportView(txaClientsLog);
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
@@ -126,27 +146,29 @@ public class ServerUI extends javax.swing.JFrame {
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(btnStart, javax.swing.GroupLayout.PREFERRED_SIZE, 107, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 163, Short.MAX_VALUE)
+                        .addGap(68, 68, 68)
                         .addComponent(lblStatus)
-                        .addGap(159, 159, 159)
+                        .addGap(76, 76, 76)
                         .addComponent(btnStop, javax.swing.GroupLayout.PREFERRED_SIZE, 107, javax.swing.GroupLayout.PREFERRED_SIZE))
-                    .addComponent(jScrollPane2))
+                    .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addComponent(lblConnectedAmount)
+                        .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 401, javax.swing.GroupLayout.PREFERRED_SIZE)))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(lblConnectedAmount)
-                .addGap(44, 44, 44))
+                .addComponent(jScrollPane3, javax.swing.GroupLayout.DEFAULT_SIZE, 401, Short.MAX_VALUE)
+                .addContainerGap())
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
                 .addContainerGap()
+                .addComponent(lblConnectedAmount)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(layout.createSequentialGroup()
-                        .addComponent(lblConnectedAmount)
-                        .addGap(0, 0, Short.MAX_VALUE))
-                    .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 306, Short.MAX_VALUE))
+                    .addComponent(jScrollPane3, javax.swing.GroupLayout.DEFAULT_SIZE, 274, Short.MAX_VALUE)
+                    .addComponent(jScrollPane2))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(btnStop, javax.swing.GroupLayout.PREFERRED_SIZE, 44, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -160,12 +182,15 @@ public class ServerUI extends javax.swing.JFrame {
 
     private void btnStartActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnStartActionPerformed
         server.start();
+        refreshComponents();
     }//GEN-LAST:event_btnStartActionPerformed
 
     private void btnStopActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnStopActionPerformed
+        //LinkedList<MyPongClient> aux = connectedClientSockets;
+        connectedMyPongClients.forEach((myPongClient) -> {
+            myPongClient.disconnect();
+        });
         server.stop();
-        disconnectAllServerClientThreads();
-        connectedClientSockets = new LinkedList<>();
     }//GEN-LAST:event_btnStopActionPerformed
 
     /**
@@ -207,54 +232,64 @@ public class ServerUI extends javax.swing.JFrame {
     private javax.swing.JButton btnStart;
     private javax.swing.JButton btnStop;
     private javax.swing.JScrollPane jScrollPane2;
+    private javax.swing.JScrollPane jScrollPane3;
     private javax.swing.JLabel lblConnectedAmount;
     private javax.swing.JLabel lblStatus;
-    private javax.swing.JTextArea txaLog;
+    private javax.swing.JTextArea txaClientsLog;
+    private javax.swing.JTextArea txaServerLog;
     // End of variables declaration//GEN-END:variables
 
-    private void setLogAlwaysOnTheButtom() {
-        DefaultCaret caret = (DefaultCaret) txaLog.getCaret();
+    private void setLogsAlwaysOnTheButtom() {
+        DefaultCaret caret = (DefaultCaret) txaServerLog.getCaret();
+        caret.setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
+        caret = (DefaultCaret) txaClientsLog.getCaret();
         caret.setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
     }
 
-    private void addClient(ServerClientThread newClient) {
-        connectedClientSockets.add(newClient);
-    }
-
-    private void removeClient(ServerClientThread disconnectedClient) {
-        connectedClientSockets.remove(disconnectedClient);
-    }
-
-    private String generateValidName() {
+    private String generateName() {
         String newName = "";
         Random rnd = new Random();
         for (int i = 1; i <= 5; i++) {
             newName += (char) (rnd.nextInt(25) + 65);
-            //newName += (char) (rnd.nextInt(122) + 97);
         }
         return newName;
     }
 
-    private void disconnectAllServerClientThreads() {
-        for (ServerClientThread serverClientThread : connectedClientSockets) {
-            serverClientThread.disconnect();
-            System.out.println("D");
+    private void removeClient(ServerClientThread serverClientThread) {
+        for (MyPongClient connectedClientSocket : connectedMyPongClients) {
+            if (connectedClientSocket.getHash() == serverClientThread.hashCode()) {
+                connectedMyPongClients.remove(connectedClientSocket);
+            }
         }
     }
 
-    private int getConnectedClientAmount() {
-        return connectedClientSockets.size();
+    private int getConnectedClientSocketAmount() {
+        return connectedMyPongClients.size();
+    }
+
+    private MyPongClient getMyPongClient(ServerClientThread serverClientThread) {
+        for (MyPongClient myPongClient : connectedMyPongClients) {
+            if (myPongClient.getHash() == serverClientThread.hashCode()) {
+                return myPongClient;
+            }
+        }
+        System.out.println("None");
+        return null;
     }
 
     private void refreshComponents() {
-        serverRunnig = server.getRunningState();
+        serverRunnig = server.isRunning();
         btnStart.setEnabled(!serverRunnig);
         btnStop.setEnabled(serverRunnig);
         lblStatus.setText(serverRunnig ? "RUNNING" : "STOPPED");
-        lblConnectedAmount.setText("Connected amount:" + getConnectedClientAmount());
+        lblConnectedAmount.setText("Connected amount:" + getConnectedClientSocketAmount());
     }
 
-    private void log(String msg) {
-        txaLog.append(msg + '\n');
+    private void serverLog(String msg) {
+        txaServerLog.append(msg + '\n');
+    }
+
+    private void clientsLog(String msg) {
+        txaClientsLog.append(msg + '\n');
     }
 }

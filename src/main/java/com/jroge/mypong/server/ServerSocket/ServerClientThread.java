@@ -16,75 +16,45 @@ import java.net.Socket;
  */
 public class ServerClientThread implements Runnable {
 
-    private Socket clientSocket;
+    private final Socket clientSocket;
     private PrintWriter printerWriterOUT;
     private BufferedReader bufferedReaderIN;
     private String name;
-    private boolean running;
+    private boolean connected;
 
     public ServerClientThread(Socket socket) {
-        running = false;
         clientSocket = socket;
+        name = "UNKNOW";
     }
 
     @Override
     public void run() {
-        tryToConnectToSocket();
-        printerWriterOUT = null;
-        bufferedReaderIN = null;
         try {
-            while (running) {
+            connected = true;
+            onConnected();
+            while (connected) {
                 printerWriterOUT = new PrintWriter(clientSocket.getOutputStream(), true);
                 bufferedReaderIN = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-                String line;
-                while ((line = bufferedReaderIN.readLine()) != null) {
-                    manageMessage(line);
+                String msg;
+                while ((msg = bufferedReaderIN.readLine()) != null) {
+                    onNewMessage(msg);
                 }
             }
         } catch (Exception e) {
-            if (running) {
-                internalLog("ERROR on run:" + e.getMessage());
+            if (connected) {
+                internalLog("ERROR(2):" + e.getMessage());
+                closeAll();
             }
         }
     }
 
-    private void tryToConnectToSocket() {
-        try {
-            running = true;
-            internalLog("New client connected.");
-            onConnected();
-        } catch (Exception e) {
-            running = false;
-            internalLog("ERROR on constructor:" + e.getMessage());
-        }
+    public boolean disconnect() {
+        connected = false;
+        closeAll();
+        return true;
     }
 
-    private void manageMessage(String messageFromClient) {
-        String response = "Ping received";
-        if (messageFromClient.equals("Disconnected")) {
-            disconnect();
-        } else if (!messageFromClient.equals("ping from client")) {
-            internalLog("New message:" + messageFromClient);
-            onNewMessage(messageFromClient);
-        } else {
-            internalLog("Ping done");
-            sendResponse(response);
-        }
-    }
-
-    public void sendResponse(String msg) {
-        try {
-            if (!msg.equals("Ping received")) {
-                internalLog("Sending...:" + msg);
-            }
-            printerWriterOUT.println(msg);
-        } catch (Exception e) {
-            internalLog("ERROR on sendMessage:" + e.getMessage());
-        }
-    }
-
-    public void disconnect() {
-        running = false;
+    private void closeAll() {
         if (clientSocket != null) {
             try {
                 if (printerWriterOUT != null) {
@@ -94,30 +64,35 @@ public class ServerClientThread implements Runnable {
                     bufferedReaderIN.close();
                 }
                 clientSocket.close();
+            } catch (Exception e) {
+                internalLog("ERROR(3):" + e.getMessage());
+            } finally {
                 internalLog("Disconnected.");
                 onDisconnected();
-            } catch (Exception e) {
-                internalLog("ERROR on disconnect:" + e.getMessage());
             }
         } else {
-            internalLog("clientSocket is null");
+            internalLog("Never connected.");
         }
     }
 
-    public boolean getRunningState() {
-        return running;
+    public void sendMessage(String msg) {
+        try {
+            printerWriterOUT.println(msg);
+        } catch (Exception e) {
+            internalLog("ERROR(4):" + e.getMessage());
+        }
+    }
+
+    public boolean isConnected() {
+        return connected;
     }
 
     public void setName(String newName) {
-        name = newName;
+        name = newName + ".t";
     }
 
-    public String getName() {
-        return name;
-    }
-
-    private void internalLog(String msg) {
-        clientThreadLog((name == null ? "unkwon" : name) + ".thread:" + msg);
+    public void internalLog(String msg) {
+        clientThreadLog(name + ":" + msg);
     }
 
     //Overridables

@@ -13,35 +13,33 @@ import java.net.Socket;
  */
 public class Server {
 
-    private ServerMainThread serverMainThread;
-    private final int port;
+    private final ServerMainThread serverMainThread;
 
-    public Server(int newPort) {
-        port = newPort;
-    }
-
-    public void start() {
+    public Server(int port) {
         serverMainThread = new ServerMainThread(port) {
             @Override
-            public void onServerStarted() {
-                onStarted();
+            public void onStarted() {
+                onServerStarted();
             }
 
             @Override
-            public void onNewClientConnected(Socket newClient) {
-                createServerClientThread(newClient);
+            public void onStopped() {
+                onServerStopped();
             }
 
             @Override
-            public void onServerStopped() {
-                onStopped();
+            public void onNewClientConnected(Socket newClientSocket) {
+                createServerClientThread(newClientSocket);
             }
 
             @Override
             public void mainThreadLog(String msg) {
-                serverLog(msg);
+                onServerLog(msg);
             }
         };
+    }
+
+    public void start() {
         new Thread(serverMainThread).start();
     }
 
@@ -54,7 +52,11 @@ public class Server {
                 = new ServerClientThread(clientSocket) {
             @Override
             public void onConnected() {
-                onClientConnected(this);
+            }
+
+            @Override
+            public void onNewMessage(String msg) {
+                onNewMessageFromClient(this, msg);
             }
 
             @Override
@@ -63,42 +65,38 @@ public class Server {
             }
 
             @Override
-            public void onNewMessage(String msg) {
-                onClientNewMessage(this, msg);
-            }
-
-            @Override
             public void clientThreadLog(String msg) {
-                serverLog(msg);
+                onClientsLog(msg);
             }
         };
+        onClientConnected(newServerClientThread);
         new Thread(newServerClientThread).start();
-        onNewClientConnected(newServerClientThread);
     }
 
-    public boolean getRunningState() {
-        return serverMainThread != null && serverMainThread.getRunningState();
+    public boolean isRunning() {
+        return serverMainThread.isRunning();
     }
 
     //Overridables
-    public void onStarted() {
+    public void onServerStarted() {
     }
 
-    public void onStopped() {
+    public void onServerStopped() {
     }
 
-    public void onClientConnected(ServerClientThread connectedClient) {
+    public void onClientConnected(ServerClientThread newClient) {
     }
 
-    public void onClientNewMessage(ServerClientThread clientSender, String msg) {
+    public void onNewMessageFromClient(ServerClientThread clientSender, String msg) {
     }
 
     public void onClientDisconnected(ServerClientThread disconnectedClient) {
     }
 
-    public void serverLog(String msg) {
+    public void onServerLog(String msg) {
+    }
+    
+    public void onClientsLog(String msg) {
     }
 
-    public void onNewClientConnected(ServerClientThread newServerClientThread) {
-    }
 }

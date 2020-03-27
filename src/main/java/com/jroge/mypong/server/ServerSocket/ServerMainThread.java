@@ -14,9 +14,9 @@ import java.net.Socket;
  */
 public class ServerMainThread implements Runnable {
 
-    private ServerSocket serverSocket = null;
-    private int port;
-    protected boolean running;
+    private ServerSocket serverSocket;
+    private final int port;
+    private boolean running;
 
     public ServerMainThread(int newPort) {
         port = newPort;
@@ -24,65 +24,72 @@ public class ServerMainThread implements Runnable {
 
     @Override
     public void run() {
-        tryToConnectToSocket();
         try {
+            tryToConnectSocket();
             while (running) {
+                internalLog("Waiting a connection...");
                 Socket client = serverSocket.accept();
+                internalLog("New sockted connected.");
                 onNewClientConnected(client);
             }
         } catch (Exception e) {
             if (running) {
-                internalLog("ERROR on run:"
-                        + e.getMessage());
+                internalLog("ERROR(2):" + e.getMessage());
+                closeAll();
             }
         }
     }
 
-    private void tryToConnectToSocket() {
+    private void tryToConnectSocket() {
         try {
             serverSocket = new ServerSocket(port);
             serverSocket.setReuseAddress(true);
             running = true;
             internalLog("Running...");
-            onServerStarted();
+            onStarted();
         } catch (Exception e) {
             running = false;
-            internalLog("ERROR on ServerMainThread constructor:"
+            internalLog("ERROR(1):"
                     + e.getMessage());
         }
     }
 
-    public boolean getRunningState() {
-        return running;
+    private void closeAll() {
+        if (serverSocket != null) {
+            try {
+                serverSocket.close();
+            } catch (Exception e) {
+                internalLog("ERROR(3):" + e.getMessage());
+            } finally {
+                internalLog("Stopped.");
+                onStopped();
+            }
+        } else {
+            internalLog("Never connected.");
+        }
     }
 
     public void stop() {
         running = false;
-        if (serverSocket != null) {
-            try {
-                serverSocket.close();
-                internalLog("Stopped.");
-            } catch (Exception e) {
-                internalLog("ERROR on stop" + e.getMessage());
-            }
-        } else {
-            internalLog("server is null");
-        }
-        onServerStopped();
+        closeAll();
+    }
+
+    public boolean isRunning() {
+        return running;
     }
 
     private void internalLog(String msg) {
-        mainThreadLog("Server.thread:" + msg);
+        mainThreadLog("server.t:" + msg);
     }
 
     //Overridables
-    public void onServerStarted() {
+    public void onStarted() {
+    }
+
+    public void onStopped() {
     }
 
     public void onNewClientConnected(Socket newClient) {
-    }
-
-    public void onServerStopped() {
     }
 
     public void mainThreadLog(String msg) {
