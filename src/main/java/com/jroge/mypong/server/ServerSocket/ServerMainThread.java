@@ -17,9 +17,11 @@ public class ServerMainThread implements Runnable {
     private ServerSocket serverSocket;
     private final int port;
     private boolean running;
+    private final ServerMainThreadEvents events;
 
-    public ServerMainThread(int newPort) {
+    public ServerMainThread(int newPort, ServerMainThreadEvents newEvents) {
         port = newPort;
+        events = newEvents;
     }
 
     @Override
@@ -30,7 +32,7 @@ public class ServerMainThread implements Runnable {
                 internalLog("Waiting a connection...");
                 Socket client = serverSocket.accept();
                 internalLog("New sockted connected.");
-                onNewClientConnected(client);
+                events.onServerNewClientConnected(client);
             }
         } catch (Exception e) {
             if (running) {
@@ -46,7 +48,7 @@ public class ServerMainThread implements Runnable {
             serverSocket.setReuseAddress(true);
             running = true;
             internalLog("Running...");
-            onStarted();
+            events.onServerStarted();
         } catch (Exception e) {
             running = false;
             internalLog("ERROR(1):"
@@ -62,7 +64,7 @@ public class ServerMainThread implements Runnable {
                 internalLog("ERROR(3):" + e.getMessage());
             } finally {
                 internalLog("Stopped.");
-                onStopped();
+                events.onServerStopped();
             }
         } else {
             internalLog("Never connected.");
@@ -79,19 +81,6 @@ public class ServerMainThread implements Runnable {
     }
 
     private void internalLog(String msg) {
-        mainThreadLog("server.t:" + msg);
-    }
-
-    //Overridables
-    public void onStarted() {
-    }
-
-    public void onStopped() {
-    }
-
-    public void onNewClientConnected(Socket newClient) {
-    }
-
-    public void mainThreadLog(String msg) {
+        events.onServerLog("server.t:" + msg);
     }
 }

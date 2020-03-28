@@ -6,6 +6,9 @@
 package com.jroge.mypong.server.ServerSocket;
 
 import java.net.Socket;
+import java.util.Calendar;
+import java.util.HashMap;
+import java.util.Random;
 
 /**
  *
@@ -14,29 +17,17 @@ import java.net.Socket;
 public class Server {
 
     private final ServerMainThread serverMainThread;
+    private final HashMap<String, ServerClientThread> connectedMyPongClients;
+    private final ServerClientThreadEvents clientEvents;
 
-    public Server(int port) {
-        serverMainThread = new ServerMainThread(port) {
-            @Override
-            public void onStarted() {
-                onServerStarted();
-            }
-
-            @Override
-            public void onStopped() {
-                onServerStopped();
-            }
-
-            @Override
-            public void onNewClientConnected(Socket newClientSocket) {
-                createServerClientThread(newClientSocket);
-            }
-
-            @Override
-            public void mainThreadLog(String msg) {
-                onServerLog(msg);
-            }
-        };
+    public Server(
+            int port,
+            ServerMainThreadEvents events,
+            ServerClientThreadEvents newClientEvents
+    ) {
+        serverMainThread = new ServerMainThread(port, events);
+        clientEvents = newClientEvents;
+        connectedMyPongClients = new HashMap<>();
     }
 
     public void start() {
@@ -44,59 +35,72 @@ public class Server {
     }
 
     public void stop() {
+        connectedMyPongClients.forEach((String t, ServerClientThread serverClientThread) -> {
+            serverClientThread.sendResponse("Server stopped");
+            //serverClientThread.disconnect();
+        });
         serverMainThread.stop();
     }
 
-    private void createServerClientThread(Socket clientSocket) {
-        ServerClientThread newServerClientThread
-                = new ServerClientThread(clientSocket) {
-            @Override
-            public void onConnected() {
-            }
-
-            @Override
-            public void onNewMessage(String msg) {
-                onNewMessageFromClient(this, msg);
-            }
-
-            @Override
-            public void onDisconnected() {
-                onClientDisconnected(this);
-            }
-
-            @Override
-            public void clientThreadLog(String msg) {
-                onClientsLog(msg);
-            }
-        };
-        onClientConnected(newServerClientThread);
+    public void createServerClientThread(Socket clientSocket) {
+        ServerClientThread newServerClientThread = new ServerClientThread(clientSocket, clientEvents);
+        String key = generateKey(newServerClientThread);
+        newServerClientThread.setKey(key);
+        connectedMyPongClients.put(key, newServerClientThread);
         new Thread(newServerClientThread).start();
+    }
+
+    public void removeClient(ServerClientThread connectedClientSocket) {
+        connectedMyPongClients.remove(connectedClientSocket.getKey());
+    }
+
+    public int getConnectedClientSocketAmount() {
+        return connectedMyPongClients.size();
     }
 
     public boolean isRunning() {
         return serverMainThread.isRunning();
     }
 
-    //Overridables
-    public void onServerStarted() {
+    private String generateKey(ServerClientThread newServerClientThread) {
+        Socket clientSocket = newServerClientThread.getSocket();
+        Calendar calendar = Calendar.getInstance();
+        String key = ""
+                + clientSocket.getLocalAddress() + "*"
+                //+ clientSocket.getLocalSocketAddress() + "*"
+                //+ clientSocket.getLocalPort() + "*"
+                + clientSocket.getPort() + "*"
+                + calendar.getTime();
+        System.out.println(key);
+        return key;
     }
 
-    public void onServerStopped() {
+    public void asignName(ServerClientThread serverClientThread) {
+        String newName = generateName();
+        serverClientThread.setName(newName);
     }
 
-    public void onClientConnected(ServerClientThread newClient) {
+    private String generateName() {
+        String newName = "";
+        Random rnd = new Random();
+        for (int i = 1; i <= 5; i++) {
+            newName += (char) (rnd.nextInt(25) + 65);
+        }
+        return newName;
     }
 
-    public void onNewMessageFromClient(ServerClientThread clientSender, String msg) {
+    public void send(ServerClientThread serverClientThread, String response) {
+        serverClientThread.sendResponse(response);
     }
 
-    public void onClientDisconnected(ServerClientThread disconnectedClient) {
+    public void sendToEveryone(String response) {
+        connectedMyPongClients.forEach((String t, ServerClientThread u) -> {
+            u.sendResponse(response);
+        });
     }
 
-    public void onServerLog(String msg) {
-    }
-    
-    public void onClientsLog(String msg) {
+    public void disconnect(ServerClientThread serverClientThread) {
+        serverClientThread.disconnect();
     }
 
 }

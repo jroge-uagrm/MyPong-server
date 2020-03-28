@@ -5,87 +5,27 @@
  */
 package com.jroge.mypong.server.ServerSocket;
 
-import java.util.LinkedList;
-import java.util.Random;
+import java.net.Socket;
 import javax.swing.text.DefaultCaret;
 
 /**
  *
  * @author jroge
  */
-public class ServerUI extends javax.swing.JFrame {
+public class ServerUI extends javax.swing.JFrame implements ServerMainThreadEvents, ServerClientThreadEvents {
 
     private final Server server;
     private final int port = 32000;
     private boolean serverRunnig;
-    private LinkedList<MyPongClient> connectedMyPongClients;
 
     /**
      * Creates new form ServerUI
      */
     public ServerUI() {
         initComponents();
-        connectedMyPongClients = new LinkedList<>();
         setLogsAlwaysOnTheButtom();
         serverRunnig = false;
-        server = new Server(port) {
-            @Override
-            public void onServerStarted() {
-                refreshComponents();
-            }
-
-            @Override
-            public void onServerStopped() {
-                refreshComponents();
-            }
-
-            @Override
-            public void onClientConnected(ServerClientThread connectedClient) {
-                connectedMyPongClients.add(new MyPongClient(
-                        connectedClient
-                ));
-                refreshComponents();
-            }
-
-            @Override
-            public void onNewMessageFromClient(ServerClientThread serverClientThread, String messageFromClient) {
-                String response = "Ping";
-                if (messageFromClient.equals("Disconnected")) {
-                    serverClientThread.disconnect();
-                } else if (!messageFromClient.equals("pinging")) {
-                    serverClientThread.internalLog("New message:" + messageFromClient);
-                    if (messageFromClient.equals("asign me name")) {
-                        String newName = generateName();
-                        getMyPongClient(serverClientThread).setName(newName);
-                        response = "assigned name:" + newName;
-                    } else if (messageFromClient.equals("Hola")) {
-                        response = "Hola! como estas?";
-                    } else if (messageFromClient.equals("Chau")) {
-                        response = "No te vayas!! :(";
-                    }
-                } else {
-                    serverClientThread.internalLog("Ping");
-                }
-                serverClientThread.sendMessage(response);
-            }
-
-            @Override
-            public void onClientDisconnected(ServerClientThread disconnectedClient) {
-                System.out.println(disconnectedClient.hashCode());
-                removeClient(disconnectedClient);
-                refreshComponents();
-            }
-
-            @Override
-            public void onServerLog(String msg) {
-                serverLog(msg);
-            }
-
-            @Override
-            public void onClientsLog(String msg) {
-                clientsLog(msg);
-            }
-        };
+        server = new Server(port, this, this);
         refreshComponents();
     }
 
@@ -187,9 +127,6 @@ public class ServerUI extends javax.swing.JFrame {
 
     private void btnStopActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnStopActionPerformed
         //LinkedList<MyPongClient> aux = connectedClientSockets;
-        connectedMyPongClients.forEach((myPongClient) -> {
-            myPongClient.disconnect();
-        });
         server.stop();
     }//GEN-LAST:event_btnStopActionPerformed
 
@@ -210,13 +147,17 @@ public class ServerUI extends javax.swing.JFrame {
                 }
             }
         } catch (ClassNotFoundException ex) {
-            java.util.logging.Logger.getLogger(ServerUI.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(ServerUI.class
+                    .getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (InstantiationException ex) {
-            java.util.logging.Logger.getLogger(ServerUI.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(ServerUI.class
+                    .getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (IllegalAccessException ex) {
-            java.util.logging.Logger.getLogger(ServerUI.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(ServerUI.class
+                    .getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (javax.swing.UnsupportedLookAndFeelException ex) {
-            java.util.logging.Logger.getLogger(ServerUI.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(ServerUI.class
+                    .getName()).log(java.util.logging.Level.SEVERE, null, ex);
         }
         //</editor-fold>
 
@@ -239,6 +180,64 @@ public class ServerUI extends javax.swing.JFrame {
     private javax.swing.JTextArea txaServerLog;
     // End of variables declaration//GEN-END:variables
 
+    @Override
+    public void onServerStarted() {
+        refreshComponents();
+    }
+
+    @Override
+    public void onServerStopped() {
+        refreshComponents();
+    }
+
+    @Override
+    public void onServerNewClientConnected(Socket newClientSocket) {
+        server.createServerClientThread(newClientSocket);
+        refreshComponents();
+    }
+
+    @Override
+    public void onServerLog(String msg) {
+        serverLog(msg);
+    }
+
+    @Override
+    public void onClientConnected(ServerClientThread serverClientThread) {
+        //Client connected but this is detected in server.createServerClientThread(Socket s)
+    }
+
+    @Override
+    public void onClientNewMessage(ServerClientThread serverClientThread, String messageFromClient) {
+        String response = "Ping";
+        if (messageFromClient.equals("Disconnected")) {
+            server.disconnect(serverClientThread);
+        } else if (!messageFromClient.equals("pinging")) {
+            serverClientThread.internalLog("New message:" + messageFromClient);
+            if (messageFromClient.equals("asign me name")) {
+                server.asignName(serverClientThread);
+                response = "assigned name:" + serverClientThread.getName();
+            } else if (messageFromClient.equals("Hola")) {
+                response = "Hola! como estas?";
+            } else if (messageFromClient.equals("Chau")) {
+                response = "No te vayas!! :(";
+            }
+        } else {
+            serverClientThread.internalLog("Ping");
+        }
+        server.send(serverClientThread, response);
+    }
+
+    @Override
+    public void onClientDisconnected(ServerClientThread serverClientThread) {
+        server.removeClient(serverClientThread);
+        refreshComponents();
+    }
+
+    @Override
+    public void onClientLog(String msg) {
+        clientsLog(msg);
+    }
+
     private void setLogsAlwaysOnTheButtom() {
         DefaultCaret caret = (DefaultCaret) txaServerLog.getCaret();
         caret.setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
@@ -246,43 +245,12 @@ public class ServerUI extends javax.swing.JFrame {
         caret.setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
     }
 
-    private String generateName() {
-        String newName = "";
-        Random rnd = new Random();
-        for (int i = 1; i <= 5; i++) {
-            newName += (char) (rnd.nextInt(25) + 65);
-        }
-        return newName;
-    }
-
-    private void removeClient(ServerClientThread serverClientThread) {
-        for (MyPongClient connectedClientSocket : connectedMyPongClients) {
-            if (connectedClientSocket.getHash() == serverClientThread.hashCode()) {
-                connectedMyPongClients.remove(connectedClientSocket);
-            }
-        }
-    }
-
-    private int getConnectedClientSocketAmount() {
-        return connectedMyPongClients.size();
-    }
-
-    private MyPongClient getMyPongClient(ServerClientThread serverClientThread) {
-        for (MyPongClient myPongClient : connectedMyPongClients) {
-            if (myPongClient.getHash() == serverClientThread.hashCode()) {
-                return myPongClient;
-            }
-        }
-        System.out.println("None");
-        return null;
-    }
-
     private void refreshComponents() {
         serverRunnig = server.isRunning();
         btnStart.setEnabled(!serverRunnig);
         btnStop.setEnabled(serverRunnig);
         lblStatus.setText(serverRunnig ? "RUNNING" : "STOPPED");
-        lblConnectedAmount.setText("Connected amount:" + getConnectedClientSocketAmount());
+        lblConnectedAmount.setText("Connected amount:" + server.getConnectedClientSocketAmount());
     }
 
     private void serverLog(String msg) {

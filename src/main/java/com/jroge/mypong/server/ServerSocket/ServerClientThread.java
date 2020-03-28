@@ -21,23 +21,26 @@ public class ServerClientThread implements Runnable {
     private BufferedReader bufferedReaderIN;
     private String name;
     private boolean connected;
+    private String key;
+    private final ServerClientThreadEvents events;
 
-    public ServerClientThread(Socket socket) {
+    public ServerClientThread(Socket socket, ServerClientThreadEvents newEvents) {
         clientSocket = socket;
         name = "UNKNOW";
+        events = newEvents;
     }
 
     @Override
     public void run() {
         try {
             connected = true;
-            onConnected();
+            events.onClientConnected(this);
             while (connected) {
                 printerWriterOUT = new PrintWriter(clientSocket.getOutputStream(), true);
                 bufferedReaderIN = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
                 String msg;
                 while ((msg = bufferedReaderIN.readLine()) != null) {
-                    onNewMessage(msg);
+                    events.onClientNewMessage(this,msg);
                 }
             }
         } catch (Exception e) {
@@ -68,14 +71,14 @@ public class ServerClientThread implements Runnable {
                 internalLog("ERROR(3):" + e.getMessage());
             } finally {
                 internalLog("Disconnected.");
-                onDisconnected();
+                events.onClientDisconnected(this);
             }
         } else {
             internalLog("Never connected.");
         }
     }
 
-    public void sendMessage(String msg) {
+    public void sendResponse(String msg) {
         try {
             printerWriterOUT.println(msg);
         } catch (Exception e) {
@@ -88,23 +91,26 @@ public class ServerClientThread implements Runnable {
     }
 
     public void setName(String newName) {
-        name = newName + ".t";
+        name = newName;
+    }
+
+    public void setKey(String newKey) {
+        key = newKey;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getKey() {
+        return key;
+    }
+
+    public Socket getSocket() {
+        return clientSocket;
     }
 
     public void internalLog(String msg) {
-        clientThreadLog(name + ":" + msg);
-    }
-
-    //Overridables
-    public void onConnected() {
-    }
-
-    public void onNewMessage(String msg) {
-    }
-
-    public void onDisconnected() {
-    }
-
-    public void clientThreadLog(String msg) {
+        events.onClientLog(name + ".t:" + msg);
     }
 }

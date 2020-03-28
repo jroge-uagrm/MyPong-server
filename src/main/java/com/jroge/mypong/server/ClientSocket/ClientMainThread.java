@@ -16,8 +16,8 @@ import java.net.Socket;
  */
 public class ClientMainThread implements Runnable {
 
-    private String host;
-    private int port;
+    private final String host;
+    private final int port;
     private Socket clientSocket;
     private PrintWriter printWriterOUT;
     private BufferedReader bufferedReaderIN;
@@ -28,11 +28,13 @@ public class ClientMainThread implements Runnable {
     private final int MAX_RECONNECTION_ATTEMPS = 5;
     private final int TIME_BETWEEN_RECONNECTIONS = 3;
     private final int TIME_BETWEEN_PINGS = 2;
+    private final ClientMainThreadEvents events;
 
-    public ClientMainThread(String newHost, int newPort) {
+    public ClientMainThread(String newHost, int newPort, ClientMainThreadEvents newEvents) {
         host = newHost;
         port = newPort;
         connected = false;
+        events = newEvents;
     }
 
     @Override
@@ -64,17 +66,17 @@ public class ClientMainThread implements Runnable {
             if (serverResponse == null) {
                 internalLog("Connection lost.");
                 connected = false;
-                onClientConnectionLost();
+                events.onClientConnectionLost();
             } else {
                 internalLog("Message from server:" + serverResponse);
-                onClientNewResponse(serverResponse);
+                events.onClientNewResponse(serverResponse);
             }
         } catch (Exception e) {
             //Windows
             internalLog("ERROR on manageMessage:" + e.getMessage());
             internalLog("Connection lost.");
             connected = false;//OK!!
-            onClientConnectionLost();
+            events.onClientConnectionLost();
         }
     }
 
@@ -103,7 +105,7 @@ public class ClientMainThread implements Runnable {
             }
         }
         internalLog("Disconnected.");
-        onClientDisconnected();
+        events.onClientDisconnected();
     }
 
     private void tryToConnectToSocket() {
@@ -115,12 +117,12 @@ public class ClientMainThread implements Runnable {
                 information = "asign me name";
                 connectionAttempts = 0;
                 internalLog("Connected.");
-                onClientConnected();
+                events.onClientConnected();
             } catch (Exception ex) {
                 connected = false;
                 internalLog("Unable to connect.");
                 if (connectionAttempts <= MAX_RECONNECTION_ATTEMPS) {
-                    onClientTryingReconnect();
+                    events.onClientTryingReconnect();
                     internalLog("Reconnecting... " + connectionAttempts + "/" + MAX_RECONNECTION_ATTEMPS + " attempt(s)");
                     try {
                         Thread.sleep(TIME_BETWEEN_RECONNECTIONS * 1000);
@@ -141,25 +143,6 @@ public class ClientMainThread implements Runnable {
     }
 
     private void internalLog(String msg) {
-        mainThreadLog("Client.thread:" + msg);
-    }
-
-    //Overridables
-    public void onClientConnected() {
-    }
-
-    public void onClientNewResponse(String response) {
-    }
-
-    public void onClientTryingReconnect() {
-    }
-
-    public void onClientDisconnected() {
-    }
-
-    public void onClientConnectionLost() {
-    }
-
-    public void mainThreadLog(String msg) {
+        events.mainThreadLog("Client.thread:" + msg);
     }
 }

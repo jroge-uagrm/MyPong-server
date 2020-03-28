@@ -15,40 +15,10 @@ public class Client {
     private final String host;
     private final int port;
 
-    public Client(String newHost, int newPort) {
+    public Client(String newHost, int newPort, ClientMainThreadEvents events) {
         host = newHost;
         port = newPort;
-        clientMainThread = new ClientMainThread(host, port) {
-            @Override
-            public void onClientConnected() {
-                onConnected();
-            }
-
-            @Override
-            public void onClientNewResponse(String response) {
-                onNewResponse(response);
-            }
-
-            @Override
-            public void onClientTryingReconnect() {
-                onTryingReconnect();
-            }
-
-            @Override
-            public void onClientDisconnected() {
-                onDisconnected();
-            }
-
-            @Override
-            public void onClientConnectionLost() {
-                connect();
-            }
-
-            @Override
-            public void mainThreadLog(String msg) {
-                clientLog(msg);
-            }
-        };
+        clientMainThread = new ClientMainThread(host, port, events);
     }
 
     public void connect() {
@@ -65,21 +35,5 @@ public class Client {
 
     public boolean isConnected() {
         return clientMainThread != null && clientMainThread.getConnectedStatus();
-    }
-
-    //Overridables
-    public void onConnected() {
-    }
-
-    public void onNewResponse(String response) {
-    }
-
-    public void onTryingReconnect() {
-    }
-
-    public void onDisconnected() {
-    }
-
-    public void clientLog(String msg) {
     }
 }

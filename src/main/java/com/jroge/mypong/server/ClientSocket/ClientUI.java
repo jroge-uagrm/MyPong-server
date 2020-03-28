@@ -11,7 +11,7 @@ import javax.swing.text.DefaultCaret;
  *
  * @author jroge
  */
-public class ClientUI extends javax.swing.JFrame {
+public class ClientUI extends javax.swing.JFrame implements ClientMainThreadEvents {
 
     private Client client;
     private final String host = "127.0.0.1";
@@ -24,40 +24,7 @@ public class ClientUI extends javax.swing.JFrame {
     public ClientUI() {
         initComponents();
         setLogAlwaysOnTheButtom();
-        client = new Client(host, port) {
-            @Override
-            public void onConnected() {
-                refreshComponents();
-            }
-
-            @Override
-            public void onNewResponse(String serverResponse) {
-                if (serverResponse.equals("Server stopped")) {
-                    client.disconnect();
-                } else {
-                    String response = "pinging";
-                    if (serverResponse.contains("assigned name:")) {
-                        lblName.setText(serverResponse.split(":")[1]);
-                    }
-                    client.sendMessage(response);
-                }
-            }
-
-            @Override
-            public void onTryingReconnect(){
-                refreshComponents();
-            }
-            
-            @Override
-            public void onDisconnected() {
-                refreshComponents();
-            }
-
-            @Override
-            public void clientLog(String msg) {
-                log(msg);
-            }
-        };
+        client = new Client(host, port, this);
         refreshComponents();
     }
 
@@ -237,6 +204,44 @@ public class ClientUI extends javax.swing.JFrame {
     private javax.swing.JTextArea txaLog;
     private javax.swing.JTextField txfMessage;
     // End of variables declaration//GEN-END:variables
+
+    @Override
+    public void onClientConnectionLost() {
+        client.connect();
+    }
+
+    @Override
+    public void onClientNewResponse(String serverResponse) {
+        if (serverResponse.equals("Server stopped")) {
+            client.disconnect();
+        } else {
+            String response = "pinging";
+            if (serverResponse.contains("assigned name:")) {
+                lblName.setText(serverResponse.split(":")[1]);
+            }
+            client.sendMessage(response);
+        }
+    }
+
+    @Override
+    public void onClientDisconnected() {
+        refreshComponents();
+    }
+
+    @Override
+    public void onClientConnected() {
+        refreshComponents();
+    }
+
+    @Override
+    public void onClientTryingReconnect() {
+        refreshComponents();
+    }
+
+    @Override
+    public void mainThreadLog(String string) {
+        log(string);
+    }
 
     private void setLogAlwaysOnTheButtom() {
         DefaultCaret caret = (DefaultCaret) txaLog.getCaret();
