@@ -6,6 +6,7 @@
 package com.jroge.mypong.server.ServerSocket;
 
 import java.net.Socket;
+import java.util.Random;
 import javax.swing.text.DefaultCaret;
 
 /**
@@ -191,44 +192,40 @@ public class ServerUI extends javax.swing.JFrame implements ServerMainThreadEven
     }
 
     @Override
-    public void onServerNewClientConnected(Socket newClientSocket) {
-        server.createServerClientThread(newClientSocket);
-        refreshComponents();
-    }
-
-    @Override
     public void onServerLog(String msg) {
         serverLog(msg);
     }
 
     @Override
     public void onClientConnected(ServerClientThread serverClientThread) {
-        //Client connected but this is detected in server.createServerClientThread(Socket s)
+        refreshComponents();
     }
 
     @Override
     public void onClientNewMessage(ServerClientThread serverClientThread, String messageFromClient) {
-        String response = "Ping";
-        if (messageFromClient.equals("Disconnected")) {
-            server.disconnect(serverClientThread);
-        } else if (!messageFromClient.equals("pinging")) {
-            serverClientThread.internalLog("New message:" + messageFromClient);
-            if (messageFromClient.equals("asign me name")) {
-                server.asignName(serverClientThread);
+        String response = "";
+        serverClientThread.internalLog("New message:" + messageFromClient);
+        switch (messageFromClient) {
+            case "asign me name":
+                String newName = generateName();
+                serverClientThread.setName(newName);
                 response = "assigned name:" + serverClientThread.getName();
-            } else if (messageFromClient.equals("Hola")) {
+                break;
+            case "Hola":
                 response = "Hola! como estas?";
-            } else if (messageFromClient.equals("Chau")) {
+                break;
+            case "Chau":
                 response = "No te vayas!! :(";
-            }
-        } else {
-            serverClientThread.internalLog("Ping");
+                break;
         }
-        server.send(serverClientThread, response);
+        if (!response.equals("")) {
+            server.send(serverClientThread, response);
+        }
     }
 
     @Override
     public void onClientDisconnected(ServerClientThread serverClientThread) {
+        System.out.println("OK");
         server.removeClient(serverClientThread);
         refreshComponents();
     }
@@ -259,5 +256,14 @@ public class ServerUI extends javax.swing.JFrame implements ServerMainThreadEven
 
     private void clientsLog(String msg) {
         txaClientsLog.append(msg + '\n');
+    }
+
+    private String generateName() {
+        String newName = "";
+        Random rnd = new Random();
+        for (int i = 1; i <= 5; i++) {
+            newName += (char) (rnd.nextInt(25) + 65);
+        }
+        return newName;
     }
 }

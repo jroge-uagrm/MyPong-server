@@ -8,7 +8,6 @@ package com.jroge.mypong.server.ServerSocket;
 import java.net.Socket;
 import java.util.Calendar;
 import java.util.HashMap;
-import java.util.Random;
 
 /**
  *
@@ -25,7 +24,12 @@ public class Server {
             ServerMainThreadEvents events,
             ServerClientThreadEvents newClientEvents
     ) {
-        serverMainThread = new ServerMainThread(port, events);
+        serverMainThread = new ServerMainThread(port, events) {
+            @Override
+            public void onNewClientConnected(Socket clientSocket) {
+                createServerClientThread(clientSocket);
+            }
+        };
         clientEvents = newClientEvents;
         connectedMyPongClients = new HashMap<>();
     }
@@ -37,7 +41,6 @@ public class Server {
     public void stop() {
         connectedMyPongClients.forEach((String t, ServerClientThread serverClientThread) -> {
             serverClientThread.sendResponse("Server stopped");
-            //serverClientThread.disconnect();
         });
         serverMainThread.stop();
     }
@@ -51,6 +54,8 @@ public class Server {
     }
 
     public void removeClient(ServerClientThread connectedClientSocket) {
+        System.out.println(connectedClientSocket.getKey() + "LULU");
+        System.out.println(connectedClientSocket);
         connectedMyPongClients.remove(connectedClientSocket.getKey());
     }
 
@@ -71,22 +76,8 @@ public class Server {
                 //+ clientSocket.getLocalPort() + "*"
                 + clientSocket.getPort() + "*"
                 + calendar.getTime();
-        System.out.println(key);
+        System.out.println("NEW: " + key);
         return key;
-    }
-
-    public void asignName(ServerClientThread serverClientThread) {
-        String newName = generateName();
-        serverClientThread.setName(newName);
-    }
-
-    private String generateName() {
-        String newName = "";
-        Random rnd = new Random();
-        for (int i = 1; i <= 5; i++) {
-            newName += (char) (rnd.nextInt(25) + 65);
-        }
-        return newName;
     }
 
     public void send(ServerClientThread serverClientThread, String response) {

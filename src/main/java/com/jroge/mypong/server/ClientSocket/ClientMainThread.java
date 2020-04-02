@@ -6,6 +6,7 @@
 package com.jroge.mypong.server.ClientSocket;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
@@ -19,10 +20,9 @@ public class ClientMainThread implements Runnable {
     private final String host;
     private final int port;
     private Socket clientSocket;
-    private PrintWriter printWriterOUT;
+    private PrintWriter printerWriterOUT;
     private BufferedReader bufferedReaderIN;
     private boolean connected;
-    private String information;
     private int connectionAttempts;
     private boolean tryingConnect;
     private final int MAX_RECONNECTION_ATTEMPS = 5;
@@ -34,6 +34,7 @@ public class ClientMainThread implements Runnable {
         host = newHost;
         port = newPort;
         connected = false;
+        tryingConnect = false;
         events = newEvents;
     }
 
@@ -42,13 +43,9 @@ public class ClientMainThread implements Runnable {
         tryingConnect = true;
         tryToConnectToSocket();
         try {
-            printWriterOUT = new PrintWriter(clientSocket.getOutputStream(), true);
-            bufferedReaderIN = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
             while (connected) {
-                sendMessage();
-                printWriterOUT.flush();
+                printerWriterOUT.flush();
                 manageMessage();
-                Thread.sleep(TIME_BETWEEN_PINGS * 1000);
             }
         } catch (Exception e) {
             if (connected) {
@@ -68,26 +65,24 @@ public class ClientMainThread implements Runnable {
                 connected = false;
                 events.onClientConnectionLost();
             } else {
-                internalLog("Message from server:" + serverResponse);
+                internalLog("Server response:" + serverResponse);
                 events.onClientNewResponse(serverResponse);
             }
         } catch (Exception e) {
             //Windows
-            internalLog("ERROR on manageMessage:" + e.getMessage());
-            internalLog("Connection lost.");
-            connected = false;//OK!!
-            events.onClientConnectionLost();
+            if (connected) {
+                internalLog("ERROR on manageMessage:" + e.getMessage());
+                internalLog("Connection lost.");
+                connected = false;
+                events.onClientConnectionLost();
+            }
         }
     }
 
-    public void setInformation(String newInformation) {
-        information = newInformation;
-    }
-
-    private void sendMessage() {
+    public void sendMessage(String message) {
         if (connectionAttempts == 0) {
-            printWriterOUT.println(information);
-            internalLog("Sending...:" + information);
+            printerWriterOUT.println(message);
+            internalLog("Sending...:" + message);
         }
     }
 
@@ -95,11 +90,21 @@ public class ClientMainThread implements Runnable {
         connected = false;
         tryingConnect = false;
         connectionAttempts = 0;
+        closeAll();
+    }
+
+    private void closeAll() {
         if (clientSocket != null) {
             try {
-                information = "Disconnected";
-                sendMessage();
+                sendMessage("Disconnected");
+                if (printerWriterOUT != null) {
+                    printerWriterOUT.close();
+                }
+                if (bufferedReaderIN != null) {
+                    bufferedReaderIN.close();
+                }
                 clientSocket.close();
+                events.onClientDisconnected();
             } catch (Exception e) {
                 internalLog("ERROR on disconnect" + e.getMessage());
             }
@@ -108,14 +113,23 @@ public class ClientMainThread implements Runnable {
         events.onClientDisconnected();
     }
 
+    private void startAll() {
+        connected = true;
+        connectionAttempts = 0;
+        try {
+            printerWriterOUT = new PrintWriter(clientSocket.getOutputStream(), true);
+            bufferedReaderIN = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+        } catch (IOException ex) {
+            internalLog("ERROR(999):" + ex.getMessage());
+        }
+    }
+
     private void tryToConnectToSocket() {
         if (tryingConnect) {
             connectionAttempts++;
             try {
                 clientSocket = new Socket(host, port);
-                connected = true;
-                information = "asign me name";
-                connectionAttempts = 0;
+                startAll();
                 internalLog("Connected.");
                 events.onClientConnected();
             } catch (Exception ex) {

@@ -26,7 +26,7 @@ public class Client {
     }
 
     public void sendMessage(String msg) {
-        clientMainThread.setInformation(msg);
+        clientMainThread.sendMessage(msg);
     }
 
     public void disconnect() {

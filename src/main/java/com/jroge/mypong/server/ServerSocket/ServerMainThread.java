@@ -32,7 +32,7 @@ public class ServerMainThread implements Runnable {
                 internalLog("Waiting a connection...");
                 Socket client = serverSocket.accept();
                 internalLog("New sockted connected.");
-                events.onServerNewClientConnected(client);
+                onNewClientConnected(client);
             }
         } catch (Exception e) {
             if (running) {
@@ -82,5 +82,9 @@ public class ServerMainThread implements Runnable {
 
     private void internalLog(String msg) {
         events.onServerLog("server.t:" + msg);
+    }
+
+    //Overridables
+    public void onNewClientConnected(Socket clientSocket) {
     }
 }

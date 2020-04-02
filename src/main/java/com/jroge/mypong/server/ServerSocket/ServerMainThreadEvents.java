@@ -17,7 +17,5 @@ public interface ServerMainThreadEvents {
 
     public void onServerStopped();
 
-    public void onServerNewClientConnected(Socket newClient);
-
     public void onServerLog(String msg);
 }

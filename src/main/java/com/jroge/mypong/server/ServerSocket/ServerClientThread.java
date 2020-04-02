@@ -33,28 +33,29 @@ public class ServerClientThread implements Runnable {
     @Override
     public void run() {
         try {
+            System.out.println("MO");
             connected = true;
             events.onClientConnected(this);
+            printerWriterOUT = new PrintWriter(clientSocket.getOutputStream(), true);
+            bufferedReaderIN = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+            String msg;
             while (connected) {
-                printerWriterOUT = new PrintWriter(clientSocket.getOutputStream(), true);
-                bufferedReaderIN = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-                String msg;
-                while ((msg = bufferedReaderIN.readLine()) != null) {
-                    events.onClientNewMessage(this,msg);
-                }
+                msg = bufferedReaderIN.readLine();
+                events.onClientNewMessage(this, msg);
             }
         } catch (Exception e) {
             if (connected) {
                 internalLog("ERROR(2):" + e.getMessage());
                 closeAll();
             }
+        } finally {
+            events.onClientDisconnected(this);
         }
     }
 
-    public boolean disconnect() {
+    public void disconnect() {
         connected = false;
         closeAll();
-        return true;
     }
 
     private void closeAll() {
@@ -71,7 +72,6 @@ public class ServerClientThread implements Runnable {
                 internalLog("ERROR(3):" + e.getMessage());
             } finally {
                 internalLog("Disconnected.");
-                events.onClientDisconnected(this);
             }
         } else {
             internalLog("Never connected.");

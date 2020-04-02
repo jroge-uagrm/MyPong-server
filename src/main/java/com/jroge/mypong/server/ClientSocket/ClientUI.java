@@ -13,7 +13,7 @@ import javax.swing.text.DefaultCaret;
  */
 public class ClientUI extends javax.swing.JFrame implements ClientMainThreadEvents {
 
-    private Client client;
+    private final Client client;
     private final String host = "127.0.0.1";
     private final int port = 32000;
     private boolean clientConnected;
@@ -146,12 +146,10 @@ public class ClientUI extends javax.swing.JFrame implements ClientMainThreadEven
 
     private void btnDisconnectActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnDisconnectActionPerformed
         client.disconnect();
-        refreshComponents();
     }//GEN-LAST:event_btnDisconnectActionPerformed
 
     private void btnConnectActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnConnectActionPerformed
         client.connect();
-        refreshComponents();
     }//GEN-LAST:event_btnConnectActionPerformed
 
     private void btnSendMessageActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnSendMessageActionPerformed
@@ -206,8 +204,9 @@ public class ClientUI extends javax.swing.JFrame implements ClientMainThreadEven
     // End of variables declaration//GEN-END:variables
 
     @Override
-    public void onClientConnectionLost() {
-        client.connect();
+    public void onClientConnected() {
+        client.sendMessage("asign me name");
+        refreshComponents();
     }
 
     @Override
@@ -215,21 +214,19 @@ public class ClientUI extends javax.swing.JFrame implements ClientMainThreadEven
         if (serverResponse.equals("Server stopped")) {
             client.disconnect();
         } else {
-            String response = "pinging";
             if (serverResponse.contains("assigned name:")) {
-                lblName.setText(serverResponse.split(":")[1]);
+                changeName(serverResponse.split(":")[1]);
             }
-            client.sendMessage(response);
         }
     }
 
     @Override
-    public void onClientDisconnected() {
-        refreshComponents();
+    public void onClientConnectionLost() {
+        client.connect();
     }
 
     @Override
-    public void onClientConnected() {
+    public void onClientDisconnected() {
         refreshComponents();
     }
 
@@ -248,12 +245,15 @@ public class ClientUI extends javax.swing.JFrame implements ClientMainThreadEven
         caret.setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
     }
 
+    private void changeName(String newName) {
+        lblName.setText(newName);
+    }
+
     private void refreshComponents() {
         clientConnected = client.isConnected();
         btnConnect.setEnabled(!clientConnected);
         btnDisconnect.setEnabled(clientConnected);
         btnSendMessage.setEnabled(clientConnected);
-//        lblName.setText(client.getName());
         lblStatus.setText(clientConnected ? "CONNECTED" : "DISCONNECTED");
     }
 
