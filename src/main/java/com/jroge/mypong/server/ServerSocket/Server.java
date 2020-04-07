@@ -8,6 +8,7 @@ package com.jroge.mypong.server.ServerSocket;
 import java.net.Socket;
 import java.util.Calendar;
 import java.util.HashMap;
+import java.util.LinkedList;
 
 /**
  *
@@ -16,7 +17,7 @@ import java.util.HashMap;
 public class Server {
 
     private final ServerMainThread serverMainThread;
-    private final HashMap<String, ServerClientThread> connectedMyPongClients;
+    private final HashMap<String, ServerClientThread> connectedClients;
     private final ServerClientThreadEvents clientEvents;
 
     public Server(
@@ -31,7 +32,7 @@ public class Server {
             }
         };
         clientEvents = newClientEvents;
-        connectedMyPongClients = new HashMap<>();
+        connectedClients = new HashMap<>();
     }
 
     public void start() {
@@ -39,28 +40,32 @@ public class Server {
     }
 
     public void stop() {
-        connectedMyPongClients.forEach((String t, ServerClientThread serverClientThread) -> {
-            serverClientThread.sendResponse("Server stopped");
-        });
         serverMainThread.stop();
+        LinkedList<String> aux = new LinkedList<>();
+        connectedClients.forEach((String t, ServerClientThread serverClientThread) -> {
+            //serverClientThread.sendResponse("Server stopped");
+            aux.add(t);
+        });
+        for (String stringKey : aux) {
+            connectedClients.get(stringKey).sendResponse("Server stopped");
+            connectedClients.get(stringKey).disconnect();
+        };
     }
 
     public void createServerClientThread(Socket clientSocket) {
         ServerClientThread newServerClientThread = new ServerClientThread(clientSocket, clientEvents);
         String key = generateKey(newServerClientThread);
         newServerClientThread.setKey(key);
-        connectedMyPongClients.put(key, newServerClientThread);
+        connectedClients.put(key, newServerClientThread);
         new Thread(newServerClientThread).start();
     }
 
     public void removeClient(ServerClientThread connectedClientSocket) {
-        System.out.println(connectedClientSocket.getKey() + "LULU");
-        System.out.println(connectedClientSocket);
-        connectedMyPongClients.remove(connectedClientSocket.getKey());
+        connectedClients.remove(connectedClientSocket.getKey());
     }
 
     public int getConnectedClientSocketAmount() {
-        return connectedMyPongClients.size();
+        return connectedClients.size();
     }
 
     public boolean isRunning() {
@@ -85,7 +90,7 @@ public class Server {
     }
 
     public void sendToEveryone(String response) {
-        connectedMyPongClients.forEach((String t, ServerClientThread u) -> {
+        connectedClients.forEach((String t, ServerClientThread u) -> {
             u.sendResponse(response);
         });
     }

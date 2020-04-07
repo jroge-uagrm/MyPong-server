@@ -225,7 +225,6 @@ public class ServerUI extends javax.swing.JFrame implements ServerMainThreadEven
 
     @Override
     public void onClientDisconnected(ServerClientThread serverClientThread) {
-        System.out.println("OK");
         server.removeClient(serverClientThread);
         refreshComponents();
     }

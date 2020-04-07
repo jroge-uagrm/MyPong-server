@@ -33,7 +33,6 @@ public class ServerClientThread implements Runnable {
     @Override
     public void run() {
         try {
-            System.out.println("MO");
             connected = true;
             events.onClientConnected(this);
             printerWriterOUT = new PrintWriter(clientSocket.getOutputStream(), true);
