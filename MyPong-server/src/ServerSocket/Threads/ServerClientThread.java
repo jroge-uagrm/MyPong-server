@@ -48,7 +48,6 @@ public class ServerClientThread implements Runnable {
                 if (containerObject == null) {
                     throw new IOException();
                 } else {
-                    internalLog("Received:" + content);
                     events.onClientNewMessage(containerObject);
                 }
             }
@@ -108,6 +107,6 @@ public class ServerClientThread implements Runnable {
     }
 
     public void internalLog(String msg) {
-        events.onClientLog("client.t:" + msg);
+        events.onClientLog("cl.th:" + msg);
     }
 }

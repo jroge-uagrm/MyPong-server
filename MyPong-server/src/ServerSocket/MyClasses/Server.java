@@ -44,7 +44,7 @@ public class Server {
         connectedSocketsVerifier = new ConnectedSocketsVerifier() {
             @Override
             public void onNotReachable(String clientKey) {
-                removeClient(clientKey);
+                // removeClient(clientKey);
             }
         };
     }
@@ -66,7 +66,7 @@ public class Server {
                     new ContainerObject(
                             "server",
                             "serverStopped",
-                            stringKey
+                            new String[]{stringKey}
                     )
             ));
             connectedClients.get(stringKey).disconnect();
@@ -105,8 +105,8 @@ public class Server {
         return key;
     }
 
-    public void send(String destinationKey, String message) {
-        connectedClients.get(destinationKey).sendMessage(message);
+    public void send(String destinationKey, ContainerObject object) {
+        connectedClients.get(destinationKey).sendMessage(gson.toJson(object));
     }
 
     public void sendToEveryone(String body) {
@@ -119,7 +119,7 @@ public class Server {
                     new ContainerObject(
                             "server",
                             body,
-                            clientKey
+                            new String[]{clientKey}
                     )
             ));
         };

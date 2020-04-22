@@ -9,30 +9,36 @@ import ServerSocket.MyClasses.Server;
 import ServerSocket.MyClasses.ContainerObject;
 import ServerSocket.Events.ServerClientThreadEvents;
 import ServerSocket.Events.ServerMainThreadEvents;
+import ServerSocket.MyClasses.User;
 import com.google.gson.Gson;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Base64;
+import java.util.LinkedList;
 import javax.swing.text.DefaultCaret;
 
 /**
  *
  * @author jroge
  */
-public class ServerUI extends javax.swing.JFrame implements ServerMainThreadEvents, ServerClientThreadEvents {
+public class GameServerUI extends javax.swing.JFrame implements ServerMainThreadEvents, ServerClientThreadEvents {
 
     private final Server server;
     private final int port = 32000;
     private boolean serverRunnig;
+    private LinkedList<User> userList;
     private final Gson gson;
 
     /**
      * Creates new form ServerUI
      */
-    public ServerUI() {
+    public GameServerUI() {
         initComponents();
         setLogsAlwaysOnTheButtom();
-        serverRunnig = false;
         server = new Server(port, this, this);
         refreshComponents();
         gson = new Gson();
+        userList = new LinkedList<>();
     }
 
     /**
@@ -153,24 +159,25 @@ public class ServerUI extends javax.swing.JFrame implements ServerMainThreadEven
                 }
             }
         } catch (ClassNotFoundException ex) {
-            java.util.logging.Logger.getLogger(ServerUI.class
+            java.util.logging.Logger.getLogger(GameServerUI.class
                     .getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (InstantiationException ex) {
-            java.util.logging.Logger.getLogger(ServerUI.class
+            java.util.logging.Logger.getLogger(GameServerUI.class
                     .getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (IllegalAccessException ex) {
-            java.util.logging.Logger.getLogger(ServerUI.class
+            java.util.logging.Logger.getLogger(GameServerUI.class
                     .getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (javax.swing.UnsupportedLookAndFeelException ex) {
-            java.util.logging.Logger.getLogger(ServerUI.class
+            java.util.logging.Logger.getLogger(GameServerUI.class
                     .getName()).log(java.util.logging.Level.SEVERE, null, ex);
         }
+        //</editor-fold>
         //</editor-fold>
 
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
-                new ServerUI().setVisible(true);
+                new GameServerUI().setVisible(true);
             }
         });
     }
@@ -204,27 +211,83 @@ public class ServerUI extends javax.swing.JFrame implements ServerMainThreadEven
     @Override
     public void onClientConnected(String connectedKey) {
         String body = "newKey_" + connectedKey;
-        server.send(connectedKey, gson.toJson(new ContainerObject(
+        server.send(connectedKey, new ContainerObject(
                 "server",
                 body,
-                connectedKey
-        )));
-        sendConnectedClientListUpdated();
+                new String[]{connectedKey}
+        ));
         refreshComponents();
     }
 
     @Override
     public void onClientNewMessage(ContainerObject object) {
-        if (!object.destination.equals("server")) {
-            server.send(object.destination, gson.toJson(object));
+        for (String destination : object.destinations) {
+            if (!destination.equals("server")) {
+                server.send(destination, object);
+            } else {
+                clientsLog("cl.th:" + object.body);
+                String[] elements = object.body.split("_");
+                String action = elements[0];
+                switch (action) {
+                    case "login":
+                        User newUser = gson.fromJson(elements[1], User.class);
+                        User userSaved = searchUser(newUser.username);
+                        String loginResponse;
+                        if (userSaved == null) {
+                            loginResponse = "Usuario no existe";
+                        } else if (!userSaved.password.equals(protectPassword(newUser.password))) {
+                            loginResponse = "Contraseña incorrecta";
+                        } else {
+                            loginResponse = "OK";
+                            userSaved.key = object.origin;
+                            sendUserList();
+                        }
+                        server.send(object.origin, new ContainerObject(
+                                "server",
+                                "loginResponse_" + loginResponse,
+                                new String[]{object.origin}
+                        ));
+                        break;
+                    case "register":
+                        User registerUser = gson.fromJson(elements[1], User.class);
+                        String registerResponse;
+                        if (registerUser.username.equals("")) {
+                            registerResponse = "Usuario vacío";
+                        } else if (searchUser(registerUser.username) != null) {
+                            registerResponse = "Usuario ya existe";
+                        } else {
+                            registerUser.key = object.origin;
+                            registerUser.password = protectPassword(registerUser.password);
+                            userList.add(registerUser);
+                            registerResponse = "OK";
+                            sendUserList();
+                        }
+                        server.send(object.origin, new ContainerObject(
+                                "server",
+                                "registerResponse_" + registerResponse,
+                                new String[]{object.origin}
+                        ));
+                        break;
+                }
+            }
         }
+    }
+
+    private User searchUser(String usernameToSearch) {
+        for (User user : userList) {
+            if (user.username.equals(usernameToSearch)) {
+                return user;
+            }
+        }
+        return null;
     }
 
     @Override
     public void onClientDisconnected(String key) {
         server.removeClient(key);
+        userListRemoveKey(key);
         if (server.isRunning()) {
-            sendConnectedClientListUpdated();
+            sendUserList();
         }
         refreshComponents();
     }
@@ -234,9 +297,39 @@ public class ServerUI extends javax.swing.JFrame implements ServerMainThreadEven
         clientsLog(msg);
     }
 
-    private void sendConnectedClientListUpdated() {
-        String connectedClientsJson = gson.toJson(server.getConnectedClients());
-        server.sendToEveryone("clientList_" + connectedClientsJson);
+    private void userListRemoveKey(String keyToRemove) {
+        for (User user : userList) {
+            if (user.key.equals(keyToRemove)) {
+                user.key = "";
+                break;
+            }
+        }
+    }
+
+    private void sendUserList() {
+        LinkedList<User> newUserList = new LinkedList<>();
+        for (User user : userList) {
+            System.out.println(user.key);
+            if (user.key != null && !user.key.equals("")) {
+                newUserList.add(user);
+            }
+        }
+        String userListJson = gson.toJson(newUserList);
+        server.sendToEveryone("userList_" + userListJson);
+    }
+
+    private String protectPassword(String plainText) {
+        MessageDigest md;
+        try {
+            md = MessageDigest.getInstance("MD5");
+            md.update(plainText.getBytes());
+            byte[] digest = md.digest();
+            byte[] encoded = Base64.getEncoder().encode(digest);
+            return new String(encoded);
+        } catch (NoSuchAlgorithmException ex) {
+            System.out.println(ex.getMessage());
+            return "empty";
+        }
     }
 
     private void setLogsAlwaysOnTheButtom() {

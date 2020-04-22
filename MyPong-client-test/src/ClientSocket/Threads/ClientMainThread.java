@@ -29,7 +29,7 @@ public class ClientMainThread implements Runnable {
     private int connectionAttempts;
     private boolean tryingConnect;
     private final int MAX_RECONNECTION_ATTEMPS = 5;
-    private final int TIME_BETWEEN_RECONNECTIONS = 3;
+    private final int TIME_BETWEEN_RECONNECTIONS = 2;
     private final ClientMainThreadEvents events;
     private final Gson gson;
 
@@ -121,7 +121,6 @@ public class ClientMainThread implements Runnable {
                 connected = false;
                 internalLog("Unable to connect.");
                 if (connectionAttempts <= MAX_RECONNECTION_ATTEMPS) {
-                    events.onClientTryingReconnect();
                     internalLog("Reconnecting... " + connectionAttempts + "/" + MAX_RECONNECTION_ATTEMPS + " attempt(s)");
                     try {
                         Thread.sleep(TIME_BETWEEN_RECONNECTIONS * 1000);
@@ -134,7 +133,6 @@ public class ClientMainThread implements Runnable {
                 }
             }
         }
-
     }
 
     public boolean getConnectedStatus() {

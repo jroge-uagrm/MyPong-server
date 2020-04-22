@@ -8,6 +8,7 @@ package ServerSocket.MyClasses;
 import ServerSocket.Threads.ServerClientThread;
 import java.io.IOException;
 import java.net.Socket;
+import java.util.Iterator;
 import java.util.LinkedList;
 
 /**
@@ -36,7 +37,7 @@ class ConnectedSocketsVerifier implements Runnable {
         verify = true;
         ServerClientThread clientInVerification;
         Socket socketInVerification;
-        int i = 0;
+        Iterator<ServerClientThread> iterator = connectedClients.iterator();
         System.out.println("Verify start");
         while (verify) {
             try {
@@ -44,19 +45,23 @@ class ConnectedSocketsVerifier implements Runnable {
             } catch (InterruptedException ex) {
                 //Thread.sleep ERROR
             }
-            if (connectedClients.isEmpty()) {
+            if (!connectedClients.isEmpty()) {
+                iterator = connectedClients.iterator();
+            } else {
                 continue;
             }
-            i = i >= connectedClients.size() ? 0 : i;
-            clientInVerification = connectedClients.get(i);
+            clientInVerification = iterator.next();
             socketInVerification = clientInVerification.getSocket();
             try {
                 socketInVerification.getInetAddress().isReachable(1000);
-                i++;
                 System.out.println("Ok:" + socketInVerification.getPort());
             } catch (IOException ex) {
                 System.out.println("Bad:" + socketInVerification.getPort());
                 onNotReachable(clientInVerification.getKey());
+            } finally {
+                if (!iterator.hasNext()) {
+                    iterator = connectedClients.iterator();
+                }
             }
         }
         System.out.println("Verify finish");

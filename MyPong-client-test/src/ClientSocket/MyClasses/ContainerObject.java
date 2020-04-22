@@ -13,11 +13,11 @@ public class ContainerObject {
 
     public final String origin;
     public final String body;
-    public final String destination;
+    public final String[] destinations;
 
-    public ContainerObject(String origin, String body, String destination) {
+    public ContainerObject(String origin, String body, String[] destination) {
         this.origin = origin;
         this.body = body;
-        this.destination = destination;
+        this.destinations = destination;
     }
 }

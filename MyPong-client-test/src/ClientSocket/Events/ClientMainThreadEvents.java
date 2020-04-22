@@ -19,8 +19,6 @@ public interface ClientMainThreadEvents {
 
     public void onClientConnected();
 
-    public void onClientTryingReconnect();
-
     public void mainThreadLog(String string);
     
 }
