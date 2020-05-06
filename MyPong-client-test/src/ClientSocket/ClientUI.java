@@ -26,7 +26,7 @@ public class ClientUI extends javax.swing.JFrame implements ClientMainThreadEven
     private boolean connected;
     private User[] userList;
     private final Gson gson;
-    private String key, name;
+    private String key, name, action;
 
     /**
      * Creates new form ClientUI
@@ -37,6 +37,7 @@ public class ClientUI extends javax.swing.JFrame implements ClientMainThreadEven
         client = new Client(host, port, this);
         gson = new Gson();
         name = "Client";
+        action = "";
         refreshComponents();
     }
 
@@ -51,7 +52,6 @@ public class ClientUI extends javax.swing.JFrame implements ClientMainThreadEven
 
         txfMessage1 = new javax.swing.JTextField();
         btnDisconnect = new javax.swing.JButton();
-        btnConnect = new javax.swing.JButton();
         lblStatus = new javax.swing.JLabel();
         btnSendMessage = new javax.swing.JButton();
         txfMessage = new javax.swing.JTextField();
@@ -74,14 +74,6 @@ public class ClientUI extends javax.swing.JFrame implements ClientMainThreadEven
         btnDisconnect.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 btnDisconnectActionPerformed(evt);
-            }
-        });
-
-        btnConnect.setBackground(java.awt.Color.green);
-        btnConnect.setText("Connect");
-        btnConnect.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btnConnectActionPerformed(evt);
             }
         });
 
@@ -138,8 +130,7 @@ public class ClientUI extends javax.swing.JFrame implements ClientMainThreadEven
                         .addContainerGap()
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addGroup(layout.createSequentialGroup()
-                                .addComponent(btnConnect, javax.swing.GroupLayout.PREFERRED_SIZE, 107, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                .addGap(0, 0, Short.MAX_VALUE)
                                 .addComponent(lblStatus)
                                 .addGap(141, 141, 141)
                                 .addComponent(btnDisconnect, javax.swing.GroupLayout.PREFERRED_SIZE, 107, javax.swing.GroupLayout.PREFERRED_SIZE))
@@ -171,7 +162,6 @@ public class ClientUI extends javax.swing.JFrame implements ClientMainThreadEven
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                             .addComponent(btnDisconnect, javax.swing.GroupLayout.PREFERRED_SIZE, 44, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addComponent(btnConnect, javax.swing.GroupLayout.PREFERRED_SIZE, 44, javax.swing.GroupLayout.PREFERRED_SIZE)
                             .addComponent(lblStatus)))
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(jScrollPane1)
@@ -197,10 +187,6 @@ public class ClientUI extends javax.swing.JFrame implements ClientMainThreadEven
         client.disconnect();
     }//GEN-LAST:event_btnDisconnectActionPerformed
 
-    private void btnConnectActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnConnectActionPerformed
-        client.connect();
-    }//GEN-LAST:event_btnConnectActionPerformed
-
     private void btnSendMessageActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnSendMessageActionPerformed
         int[] indices = lstUsers.getSelectedIndices();
         String[] destinations = new String[indices.length];
@@ -215,22 +201,13 @@ public class ClientUI extends javax.swing.JFrame implements ClientMainThreadEven
     }//GEN-LAST:event_btnSendMessageActionPerformed
 
     private void btnLoginActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnLoginActionPerformed
-        name = txfUsername.getText();
-        client.sendMessage(new ContainerObject(
-                key,
-                "login_" + gson.toJson(new User(name, txfPassword.getText())),
-                new String[]{"server"}
-        ));
+        action = "login";
+        client.connect();
     }//GEN-LAST:event_btnLoginActionPerformed
 
     private void btnRegisterActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnRegisterActionPerformed
-        name = txfUsername.getText();
-        String password = txfPassword.getText();
-        client.sendMessage(new ContainerObject(
-                key,
-                "register_" + gson.toJson(new User(name, password)),
-                new String[]{"server"}
-        ));
+        action = "register";
+        client.connect();
     }//GEN-LAST:event_btnRegisterActionPerformed
 
     /**
@@ -273,7 +250,6 @@ public class ClientUI extends javax.swing.JFrame implements ClientMainThreadEven
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JButton btnConnect;
     private javax.swing.JButton btnDisconnect;
     private javax.swing.JButton btnLogin;
     private javax.swing.JButton btnRegister;
@@ -299,12 +275,14 @@ public class ClientUI extends javax.swing.JFrame implements ClientMainThreadEven
     public void onClientNewResponse(String serverResponse) {
         ContainerObject object = gson.fromJson(serverResponse, ContainerObject.class);
         if (object.origin.equals("server")) {
-            String[] elements = object.body.split("_");
+            String data = (String) object.body;
+            String[] elements = data.split("_");
             String action = elements[0];
             switch (action) {
                 case "newKey":
                     key = elements[1];
                     client.sendMessage(new ContainerObject(key, "OK", new String[]{"server"}));
+                    sendCredentials();
                     break;
                 case "userList":
                     userList = gson.fromJson(elements[1], User[].class);
@@ -312,7 +290,7 @@ public class ClientUI extends javax.swing.JFrame implements ClientMainThreadEven
                     client.sendMessage(new ContainerObject(key, "OK", new String[]{"server"}));
                     break;
                 case "serverStopped":
-                    client.disconnect();
+//                    client.disconnect();
                     break;
                 case "loginResponse":
                     String loginResponse = elements[1];
@@ -338,7 +316,10 @@ public class ClientUI extends javax.swing.JFrame implements ClientMainThreadEven
 
     @Override
     public void onClientConnectionLost() {
-        client.connect();
+        if (action.equals("")) {
+            client.connect();
+        }
+        refreshComponents();
     }
 
     @Override
@@ -352,6 +333,25 @@ public class ClientUI extends javax.swing.JFrame implements ClientMainThreadEven
         log(string);
     }
 
+    private void sendCredentials() {
+        if (action.equals("login")) {
+            name = txfUsername.getText();
+            client.sendMessage(new ContainerObject(
+                    key,
+                    "login_" + gson.toJson(new User(name, txfPassword.getText())),
+                    new String[]{"server"}
+            ));
+        } else {
+            name = txfUsername.getText();
+            String password = txfPassword.getText();
+            client.sendMessage(new ContainerObject(
+                    key,
+                    "register_" + gson.toJson(new User(name, password)),
+                    new String[]{"server"}
+            ));
+        }
+    }
+
     private void setLogAlwaysOnTheButtom() {
         DefaultCaret caret = (DefaultCaret) txaLog.getCaret();
         caret.setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
@@ -360,7 +360,7 @@ public class ClientUI extends javax.swing.JFrame implements ClientMainThreadEven
     private void refreshComponents() {
         lblName.setText(name);
         connected = client.isConnected();
-        btnConnect.setEnabled(!connected);
+//        btnConnect.setEnabled(!connected);
         btnDisconnect.setEnabled(connected);
         lblStatus.setText(connected ? "CONNECTED" : "DISCONNECTED");
         boolean logged = !lblName.getText().equals("Client");
@@ -368,10 +368,10 @@ public class ClientUI extends javax.swing.JFrame implements ClientMainThreadEven
         txfMessage.setEnabled(logged);
         btnSendMessage.setEnabled(logged);
 
-        txfUsername.setEnabled(!logged && connected);
-        txfPassword.setEnabled(!logged && connected);
-        btnLogin.setEnabled(!logged && connected);
-        btnRegister.setEnabled(!logged && connected);
+        txfUsername.setEnabled(!logged);
+        txfPassword.setEnabled(!logged);
+        btnLogin.setEnabled(!logged);
+        btnRegister.setEnabled(!logged);
     }
 
     private void changeClientList() {
