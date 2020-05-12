@@ -7,7 +7,7 @@ package ClientSocket.Threads;
 
 import ClientSocket.Events.ClientMainThreadEvents;
 import com.google.gson.Gson;
-import ClientSocket.MyClasses.ContainerObject;
+import ClientSocket.MyClasses.Auxiliaries.ContainerObject;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -50,17 +50,18 @@ public class ClientMainThread implements Runnable {
         try {
             while (connected) {
                 message = bufferedReaderIN.readLine();
-                internalLog("Received:" + message);
-                events.onClientNewResponse(message);
+                if (message == null) {
+                    connected = false;
+                } else {
+                    internalLog("Received:" + message);
+                    events.onClientNewResponse(message);
+                }
             }
+            internalLog("Connection lost.");
         } catch (IOException ex) {
-            if (connected) {
-                internalLog("Connection lost.");
-                connected = false;
-                closeAll();
-                events.onClientConnectionLost();
-            }
+            internalLog("Disconnected");
         } finally {
+            disconnect();
             events.onClientDisconnected();
         }
     }
@@ -95,7 +96,6 @@ public class ClientMainThread implements Runnable {
                 internalLog("ERROR on disconnect" + e.getMessage());
             }
         }
-        internalLog("Disconnected.");
     }
 
     private void startAll() {

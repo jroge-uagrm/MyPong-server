@@ -7,7 +7,7 @@ package ServerSocket.Threads;
 
 import ServerSocket.Events.ServerClientThreadEvents;
 import com.google.gson.Gson;
-import ServerSocket.MyClasses.ContainerObject;
+import ServerSocket.MyClasses.Auxiliaries.ContainerObject;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;

@@ -5,15 +5,18 @@
  */
 package ServerSocket.UIs;
 
-import ServerSocket.MyClasses.Server;
-import ServerSocket.MyClasses.ContainerObject;
+import ServerSocket.MyClasses.Principals.Server;
+import ServerSocket.MyClasses.Auxiliaries.ContainerObject;
 import ServerSocket.Events.ServerClientThreadEvents;
 import ServerSocket.Events.ServerMainThreadEvents;
-import ServerSocket.MyClasses.User;
+import ServerSocket.MyClasses.Auxiliaries.Protocol;
+import ServerSocket.MyClasses.Principals.Room;
+import ServerSocket.MyClasses.Principals.User;
 import com.google.gson.Gson;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.LinkedList;
 import javax.swing.text.DefaultCaret;
 
@@ -26,7 +29,8 @@ public class GameServerUI extends javax.swing.JFrame implements ServerMainThread
     private final Server server;
     private final int port = 32000;
     private boolean serverRunnig;
-    private LinkedList<User> userList;
+    private final LinkedList<User> userList;
+    private final HashMap<String, Room> roomList;
     private final Gson gson;
 
     /**
@@ -39,6 +43,7 @@ public class GameServerUI extends javax.swing.JFrame implements ServerMainThread
         refreshComponents();
         gson = new Gson();
         userList = new LinkedList<>();
+        roomList = new HashMap<>();
     }
 
     /**
@@ -134,11 +139,9 @@ public class GameServerUI extends javax.swing.JFrame implements ServerMainThread
 
     private void btnStartActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnStartActionPerformed
         server.start();
-        refreshComponents();
     }//GEN-LAST:event_btnStartActionPerformed
 
     private void btnStopActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnStopActionPerformed
-        //LinkedList<MyPongClient> aux = connectedClientSockets;
         server.stop();
     }//GEN-LAST:event_btnStopActionPerformed
 
@@ -201,6 +204,7 @@ public class GameServerUI extends javax.swing.JFrame implements ServerMainThread
     @Override
     public void onServerStopped() {
         refreshComponents();
+        roomList.clear();
     }
 
     @Override
@@ -210,10 +214,9 @@ public class GameServerUI extends javax.swing.JFrame implements ServerMainThread
 
     @Override
     public void onClientConnected(String connectedKey) {
-        String body = "newKey_" + connectedKey;
         server.send(connectedKey, new ContainerObject(
                 "server",
-                body,
+                new Protocol("newKey", connectedKey),
                 new String[]{connectedKey}
         ));
         refreshComponents();
@@ -225,31 +228,36 @@ public class GameServerUI extends javax.swing.JFrame implements ServerMainThread
             if (!destination.equals("server")) {
                 server.send(destination, object);
             } else {
-                clientsLog("cl.th:" + object.body);
-                String[] elements = object.body.split("_");
-                String action = elements[0];
-                switch (action) {
+                clientsLog("cl.th:Received:" + gson.toJson(object));
+                String x = gson.toJson(object.body);
+                Protocol protocol = gson.fromJson(x, Protocol.class);
+                switch (protocol.action) {
                     case "login":
-                        User newUser = gson.fromJson(elements[1], User.class);
-                        User userSaved = searchUser(newUser.username);
-                        String loginResponse;
+                        User userLoggingIn = gson.fromJson(protocol.content, User.class);
+                        User userSaved = searchUser(userLoggingIn.username);
+                        String loginResponse = "";
                         if (userSaved == null) {
                             loginResponse = "Usuario no existe";
-                        } else if (!userSaved.password.equals(protectPassword(newUser.password))) {
+                        } else if (!userSaved.password.equals(protectPassword(userLoggingIn.password))) {
                             loginResponse = "Contraseña incorrecta";
+                        } else if (!userSaved.key.equals("")) {
+                            loginResponse = "Sesión abierta";
                         } else {
                             loginResponse = "OK";
                             userSaved.key = object.origin;
-                            sendUserList();
+                            sendUserList(userSaved);
                         }
                         server.send(object.origin, new ContainerObject(
                                 "server",
-                                "loginResponse_" + loginResponse,
+                                new Protocol("loginResponse", loginResponse),
                                 new String[]{object.origin}
                         ));
+                        if (!loginResponse.equals("OK")) {
+                            server.removeClient(object.origin);
+                        }
                         break;
                     case "register":
-                        User registerUser = gson.fromJson(elements[1], User.class);
+                        User registerUser = gson.fromJson(protocol.content, User.class);
                         String registerResponse;
                         if (registerUser.username.equals("")) {
                             registerResponse = "Usuario vacío";
@@ -258,15 +266,54 @@ public class GameServerUI extends javax.swing.JFrame implements ServerMainThread
                         } else {
                             registerUser.key = object.origin;
                             registerUser.password = protectPassword(registerUser.password);
+                            registerUser.inRoom = false;
                             userList.add(registerUser);
                             registerResponse = "OK";
-                            sendUserList();
+                            sendUserList(registerUser);
                         }
                         server.send(object.origin, new ContainerObject(
                                 "server",
-                                "registerResponse_" + registerResponse,
+                                new Protocol("registerResponse", registerResponse),
                                 new String[]{object.origin}
                         ));
+                        if (!registerResponse.equals("OK")) {
+                            server.removeClient(object.origin);
+                        }
+                        break;
+                    case "createRoom":
+                        User requesting = getUser(object.origin);
+                        User rival = getUser(protocol.content);
+                        if (rival.inRoom) {
+                            server.send(requesting.key, new ContainerObject(
+                                    "server",
+                                    new Protocol("errorRoom", "El jugador no está libre"),
+                                    new String[]{requesting.key}
+                            ));
+                        } else {
+                            requesting.inRoom = true;
+                            rival.inRoom = true;
+                            String roomId = requesting.key + rival.key;
+                            Room room = new Room(roomId);
+                            room.addPlayer(requesting);
+                            roomList.put(roomId, room);
+                            String userKeyabcRoomId = requesting.key + "abc" + roomId;
+                            server.send(rival.key, new ContainerObject(
+                                    "server",
+                                    new Protocol("createRoom", userKeyabcRoomId),
+                                    new String[]{rival.key}
+                            ));
+                        }
+                        break;
+                    case "deleteRoom":
+                        Room room = roomList.get(protocol.content);
+                        for (User user : room.players) {
+                            server.send(user.key, new ContainerObject(
+                                    "server",
+                                    new Protocol("deleteRoom", ""),
+                                    new String[]{user.key}
+                            ));
+                        }
+                        roomList.remove(protocol.content);
                         break;
                 }
             }
@@ -287,7 +334,7 @@ public class GameServerUI extends javax.swing.JFrame implements ServerMainThread
         server.removeClient(key);
         userListRemoveKey(key);
         if (server.isRunning()) {
-            sendUserList();
+            server.sendToEveryone(new Protocol("disconnectedUser", key));
         }
         refreshComponents();
     }
@@ -301,21 +348,26 @@ public class GameServerUI extends javax.swing.JFrame implements ServerMainThread
         for (User user : userList) {
             if (user.key.equals(keyToRemove)) {
                 user.key = "";
+                user.inRoom = false;
                 break;
             }
         }
     }
 
-    private void sendUserList() {
+    private void sendUserList(User userLoggedIn) {
         LinkedList<User> newUserList = new LinkedList<>();
         for (User user : userList) {
-            System.out.println(user.key);
             if (user.key != null && !user.key.equals("")) {
                 newUserList.add(user);
             }
         }
         String userListJson = gson.toJson(newUserList);
-        server.sendToEveryone("userList_" + userListJson);
+        server.send(userLoggedIn.key, new ContainerObject(
+                "server",
+                new Protocol("userList", userListJson),
+                new String[]{userLoggedIn.key}
+        ));
+        server.sendToEveryone(new Protocol("connectedUser", gson.toJson(userLoggedIn)));
     }
 
     private String protectPassword(String plainText) {
@@ -330,6 +382,15 @@ public class GameServerUI extends javax.swing.JFrame implements ServerMainThread
             System.out.println(ex.getMessage());
             return "empty";
         }
+    }
+
+    private User getUser(String key) {
+        for (User user : userList) {
+            if (user.key.equals(key)) {
+                return user;
+            }
+        }
+        return null;
     }
 
     private void setLogsAlwaysOnTheButtom() {

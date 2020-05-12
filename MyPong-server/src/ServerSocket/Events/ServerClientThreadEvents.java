@@ -5,7 +5,7 @@
  */
 package ServerSocket.Events;
 
-import ServerSocket.MyClasses.ContainerObject;
+import ServerSocket.MyClasses.Auxiliaries.ContainerObject;
 import ServerSocket.Threads.ServerClientThread;
 
 /**
