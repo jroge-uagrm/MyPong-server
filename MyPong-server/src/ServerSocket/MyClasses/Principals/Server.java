@@ -14,6 +14,9 @@ import ServerSocket.Events.ServerMainThreadEvents;
 import ServerSocket.MyClasses.Auxiliaries.ConnectedSocketsVerifier;
 import ServerSocket.MyClasses.Auxiliaries.Protocol;
 import java.net.Socket;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Base64;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -109,7 +112,17 @@ public class Server {
                 + clientSocket.getLocalAddress() + "*"
                 + clientSocket.getPort() + "*"
                 + calendar.getTime();
-        return key;
+        MessageDigest md;
+        try {
+            md = MessageDigest.getInstance("MD5");
+            md.update(key.getBytes());
+            byte[] digest = md.digest();
+            byte[] encoded = Base64.getEncoder().encode(digest);
+            return new String(encoded);
+        } catch (NoSuchAlgorithmException ex) {
+            System.out.println(ex.getMessage());
+            return key;
+        }
     }
 
     public void send(String destinationKey, ContainerObject object) {

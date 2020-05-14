@@ -3,16 +3,17 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package ServerSocket.MyClasses.Principals;
+package ClientSocket.MyClasses.Auxiliaries;
 
 /**
  *
  * @author jorge
  */
-public class User {
+public interface GameActions {
 
-    public String username;
-    public String password;
-    public String key;
-    public String roomId;
+    public void refresh();
+
+    public void showMessageDialog(String msg);
+    
+    public int showConfirmDialog(String msg);
 }

@@ -5,45 +5,28 @@
  */
 package ServerSocket.UIs;
 
-import ServerSocket.MyClasses.Principals.Server;
-import ServerSocket.MyClasses.Auxiliaries.ContainerObject;
-import ServerSocket.Events.ServerClientThreadEvents;
-import ServerSocket.Events.ServerMainThreadEvents;
-import ServerSocket.MyClasses.Auxiliaries.Protocol;
-import ServerSocket.MyClasses.Principals.Room;
-import ServerSocket.MyClasses.Principals.User;
-import com.google.gson.Gson;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.Base64;
-import java.util.HashMap;
-import java.util.LinkedList;
-import javax.swing.text.DefaultCaret;
+import ServerSocket.MyClasses.Principals.GameServer;
 
 /**
  *
  * @author jroge
  */
-public class GameServerUI extends javax.swing.JFrame implements ServerMainThreadEvents, ServerClientThreadEvents {
+public class GameServerUI extends javax.swing.JFrame {
 
-    private final Server server;
-    private final int port = 32000;
-    private boolean serverRunnig;
-    private final LinkedList<User> userList;
-    private final HashMap<String, Room> roomList;
-    private final Gson gson;
+    private final GameServer gameServer;
 
     /**
      * Creates new form ServerUI
      */
     public GameServerUI() {
         initComponents();
-        setLogsAlwaysOnTheButtom();
-        server = new Server(port, this, this);
+        gameServer = new GameServer() {
+            @Override
+            public void refresh() {
+                refreshComponents();
+            }
+        };
         refreshComponents();
-        gson = new Gson();
-        userList = new LinkedList<>();
-        roomList = new HashMap<>();
     }
 
     /**
@@ -59,10 +42,6 @@ public class GameServerUI extends javax.swing.JFrame implements ServerMainThread
         btnStart = new javax.swing.JButton();
         lblStatus = new javax.swing.JLabel();
         lblConnectedAmount = new javax.swing.JLabel();
-        jScrollPane2 = new javax.swing.JScrollPane();
-        txaServerLog = new javax.swing.JTextArea();
-        jScrollPane3 = new javax.swing.JScrollPane();
-        txaClientsLog = new javax.swing.JTextArea();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
@@ -87,16 +66,6 @@ public class GameServerUI extends javax.swing.JFrame implements ServerMainThread
         lblConnectedAmount.setFont(new java.awt.Font("Cantarell", 0, 18)); // NOI18N
         lblConnectedAmount.setText("Connected amount:");
 
-        txaServerLog.setColumns(20);
-        txaServerLog.setFont(new java.awt.Font("Fira Code", 0, 18)); // NOI18N
-        txaServerLog.setRows(5);
-        jScrollPane2.setViewportView(txaServerLog);
-
-        txaClientsLog.setColumns(20);
-        txaClientsLog.setFont(new java.awt.Font("Fira Code", 0, 18)); // NOI18N
-        txaClientsLog.setRows(5);
-        jScrollPane3.setViewportView(txaClientsLog);
-
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
@@ -110,12 +79,10 @@ public class GameServerUI extends javax.swing.JFrame implements ServerMainThread
                         .addComponent(lblStatus)
                         .addGap(76, 76, 76)
                         .addComponent(btnStop, javax.swing.GroupLayout.PREFERRED_SIZE, 107, javax.swing.GroupLayout.PREFERRED_SIZE))
-                    .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(layout.createSequentialGroup()
                         .addComponent(lblConnectedAmount)
-                        .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 401, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jScrollPane3, javax.swing.GroupLayout.DEFAULT_SIZE, 401, Short.MAX_VALUE)
-                .addContainerGap())
+                        .addGap(244, 244, 244)))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -123,26 +90,22 @@ public class GameServerUI extends javax.swing.JFrame implements ServerMainThread
                 .addContainerGap()
                 .addComponent(lblConnectedAmount)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jScrollPane3, javax.swing.GroupLayout.DEFAULT_SIZE, 274, Short.MAX_VALUE)
-                    .addComponent(jScrollPane2))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(btnStop, javax.swing.GroupLayout.PREFERRED_SIZE, 44, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(btnStart, javax.swing.GroupLayout.PREFERRED_SIZE, 44, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(lblStatus))
-                .addContainerGap())
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
     private void btnStartActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnStartActionPerformed
-        server.start();
+        gameServer.start();
     }//GEN-LAST:event_btnStartActionPerformed
 
     private void btnStopActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnStopActionPerformed
-        server.stop();
+        gameServer.stop();
     }//GEN-LAST:event_btnStopActionPerformed
 
     /**
@@ -188,231 +151,15 @@ public class GameServerUI extends javax.swing.JFrame implements ServerMainThread
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton btnStart;
     private javax.swing.JButton btnStop;
-    private javax.swing.JScrollPane jScrollPane2;
-    private javax.swing.JScrollPane jScrollPane3;
     private javax.swing.JLabel lblConnectedAmount;
     private javax.swing.JLabel lblStatus;
-    private javax.swing.JTextArea txaClientsLog;
-    private javax.swing.JTextArea txaServerLog;
     // End of variables declaration//GEN-END:variables
 
-    @Override
-    public void onServerStarted() {
-        refreshComponents();
-    }
-
-    @Override
-    public void onServerStopped() {
-        refreshComponents();
-        roomList.clear();
-    }
-
-    @Override
-    public void onServerLog(String msg) {
-        serverLog(msg);
-    }
-
-    @Override
-    public void onClientConnected(String connectedKey) {
-        server.send(connectedKey, new ContainerObject(
-                "server",
-                new Protocol("newKey", connectedKey),
-                new String[]{connectedKey}
-        ));
-        refreshComponents();
-    }
-
-    @Override
-    public void onClientNewMessage(ContainerObject object) {
-        for (String destination : object.destinations) {
-            if (!destination.equals("server")) {
-                server.send(destination, object);
-            } else {
-                clientsLog("cl.th:Received:" + gson.toJson(object));
-                String x = gson.toJson(object.body);
-                Protocol protocol = gson.fromJson(x, Protocol.class);
-                switch (protocol.action) {
-                    case "login":
-                        User userLoggingIn = gson.fromJson(protocol.content, User.class);
-                        User userSaved = searchUser(userLoggingIn.username);
-                        String loginResponse = "";
-                        if (userSaved == null) {
-                            loginResponse = "Usuario no existe";
-                        } else if (!userSaved.password.equals(protectPassword(userLoggingIn.password))) {
-                            loginResponse = "Contraseña incorrecta";
-                        } else if (!userSaved.key.equals("")) {
-                            loginResponse = "Sesión abierta";
-                        } else {
-                            loginResponse = "OK";
-                            userSaved.key = object.origin;
-                            sendUserList(userSaved);
-                        }
-                        server.send(object.origin, new ContainerObject(
-                                "server",
-                                new Protocol("loginResponse", loginResponse),
-                                new String[]{object.origin}
-                        ));
-                        if (!loginResponse.equals("OK")) {
-                            server.removeClient(object.origin);
-                        }
-                        break;
-                    case "register":
-                        User registerUser = gson.fromJson(protocol.content, User.class);
-                        String registerResponse;
-                        if (registerUser.username.equals("")) {
-                            registerResponse = "Usuario vacío";
-                        } else if (searchUser(registerUser.username) != null) {
-                            registerResponse = "Usuario ya existe";
-                        } else {
-                            registerUser.key = object.origin;
-                            registerUser.password = protectPassword(registerUser.password);
-                            registerUser.inRoom = false;
-                            userList.add(registerUser);
-                            registerResponse = "OK";
-                            sendUserList(registerUser);
-                        }
-                        server.send(object.origin, new ContainerObject(
-                                "server",
-                                new Protocol("registerResponse", registerResponse),
-                                new String[]{object.origin}
-                        ));
-                        if (!registerResponse.equals("OK")) {
-                            server.removeClient(object.origin);
-                        }
-                        break;
-                    case "createRoom":
-                        User requesting = getUser(object.origin);
-                        User rival = getUser(protocol.content);
-                        if (rival.inRoom) {
-                            server.send(requesting.key, new ContainerObject(
-                                    "server",
-                                    new Protocol("errorRoom", "El jugador no está libre"),
-                                    new String[]{requesting.key}
-                            ));
-                        } else {
-                            requesting.inRoom = true;
-                            rival.inRoom = true;
-                            String roomId = requesting.key + rival.key;
-                            Room room = new Room(roomId);
-                            room.addPlayer(requesting);
-                            roomList.put(roomId, room);
-                            String userKeyabcRoomId = requesting.key + "abc" + roomId;
-                            server.send(rival.key, new ContainerObject(
-                                    "server",
-                                    new Protocol("createRoom", userKeyabcRoomId),
-                                    new String[]{rival.key}
-                            ));
-                        }
-                        break;
-                    case "deleteRoom":
-                        Room room = roomList.get(protocol.content);
-                        for (User user : room.players) {
-                            server.send(user.key, new ContainerObject(
-                                    "server",
-                                    new Protocol("deleteRoom", ""),
-                                    new String[]{user.key}
-                            ));
-                        }
-                        roomList.remove(protocol.content);
-                        break;
-                }
-            }
-        }
-    }
-
-    private User searchUser(String usernameToSearch) {
-        for (User user : userList) {
-            if (user.username.equals(usernameToSearch)) {
-                return user;
-            }
-        }
-        return null;
-    }
-
-    @Override
-    public void onClientDisconnected(String key) {
-        server.removeClient(key);
-        userListRemoveKey(key);
-        if (server.isRunning()) {
-            server.sendToEveryone(new Protocol("disconnectedUser", key));
-        }
-        refreshComponents();
-    }
-
-    @Override
-    public void onClientLog(String msg) {
-        clientsLog(msg);
-    }
-
-    private void userListRemoveKey(String keyToRemove) {
-        for (User user : userList) {
-            if (user.key.equals(keyToRemove)) {
-                user.key = "";
-                user.inRoom = false;
-                break;
-            }
-        }
-    }
-
-    private void sendUserList(User userLoggedIn) {
-        LinkedList<User> newUserList = new LinkedList<>();
-        for (User user : userList) {
-            if (user.key != null && !user.key.equals("")) {
-                newUserList.add(user);
-            }
-        }
-        String userListJson = gson.toJson(newUserList);
-        server.send(userLoggedIn.key, new ContainerObject(
-                "server",
-                new Protocol("userList", userListJson),
-                new String[]{userLoggedIn.key}
-        ));
-        server.sendToEveryone(new Protocol("connectedUser", gson.toJson(userLoggedIn)));
-    }
-
-    private String protectPassword(String plainText) {
-        MessageDigest md;
-        try {
-            md = MessageDigest.getInstance("MD5");
-            md.update(plainText.getBytes());
-            byte[] digest = md.digest();
-            byte[] encoded = Base64.getEncoder().encode(digest);
-            return new String(encoded);
-        } catch (NoSuchAlgorithmException ex) {
-            System.out.println(ex.getMessage());
-            return "empty";
-        }
-    }
-
-    private User getUser(String key) {
-        for (User user : userList) {
-            if (user.key.equals(key)) {
-                return user;
-            }
-        }
-        return null;
-    }
-
-    private void setLogsAlwaysOnTheButtom() {
-        DefaultCaret caret = (DefaultCaret) txaServerLog.getCaret();
-        caret.setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
-        caret = (DefaultCaret) txaClientsLog.getCaret();
-        caret.setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
-    }
-
     private void refreshComponents() {
-        serverRunnig = server.isRunning();
+        boolean serverRunnig = gameServer.isRunning();
         btnStart.setEnabled(!serverRunnig);
         btnStop.setEnabled(serverRunnig);
         lblStatus.setText(serverRunnig ? "RUNNING" : "STOPPED");
-        lblConnectedAmount.setText("Connected amount:" + server.getConnectedClientSocketAmount());
-    }
-
-    private void serverLog(String msg) {
-        txaServerLog.append(msg + '\n');
-    }
-
-    private void clientsLog(String msg) {
-        txaClientsLog.append(msg + '\n');
+        lblConnectedAmount.setText("Connected amount:" + gameServer.getConnectedClientSocketAmount());
     }
 }

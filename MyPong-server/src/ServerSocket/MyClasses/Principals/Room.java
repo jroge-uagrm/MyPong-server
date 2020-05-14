@@ -25,4 +25,8 @@ public class Room {
     public void addPlayer(User newPlayer) {
         players.add(newPlayer);
     }
+
+    public void removePlayer(User playerToRemove) {
+        players.remove(playerToRemove);
+    }
 }

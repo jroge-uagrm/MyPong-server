@@ -82,7 +82,7 @@ public class ServerMainThread implements Runnable {
     }
 
     private void internalLog(String msg) {
-        events.onServerLog("server.t:" + msg);
+        events.onServerLog("Main:" + msg);
     }
 
     //Overridables

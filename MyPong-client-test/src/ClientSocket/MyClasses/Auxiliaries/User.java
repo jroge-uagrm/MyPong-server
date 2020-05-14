@@ -14,12 +14,12 @@ public class User {
     public String username;
     public String password;
     public String key;
-    public boolean inRoom;
+    public String roomId;
 
     public User(String username, String password) {
         this.username = username;
         this.password = password;
         this.key = "";
-        inRoom = false;
+        roomId = "";
     }
 }

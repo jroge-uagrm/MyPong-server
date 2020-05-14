@@ -29,7 +29,7 @@ public class Client {
         new Thread(clientMainThread).start();
     }
 
-    public void sendMessage(ContainerObject object) {
+    public void send(ContainerObject object) {
         clientMainThread.sendMessage(object);
     }
 

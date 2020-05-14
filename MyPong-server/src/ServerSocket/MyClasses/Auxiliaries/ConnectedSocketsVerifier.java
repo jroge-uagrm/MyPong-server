@@ -56,9 +56,13 @@ public class ConnectedSocketsVerifier implements Runnable {
 //            Calendar time = ;
             try {
                 socketInVerification.getInetAddress().isReachable(1000);
-                System.out.println(Calendar.getInstance().get(Calendar.HOUR_OF_DAY) + ":Ok:" + socketInVerification.getPort());
+                log(
+                        Calendar.getInstance().get(Calendar.HOUR_OF_DAY) + "" + Calendar.getInstance().get(Calendar.MINUTE)
+                        + ":Ok:" + socketInVerification.getPort());
             } catch (IOException ex) {
-                System.out.println(Calendar.getInstance().get(Calendar.HOUR_OF_DAY) + ":Bad:" + socketInVerification.getPort());
+                log(
+                        Calendar.getInstance().get(Calendar.HOUR_OF_DAY) + "" + Calendar.getInstance().get(Calendar.MINUTE)
+                        + ":Bad:" + socketInVerification.getPort());
                 onNotReachable(clientInVerification.getKey());
             } finally {
                 if (!iterator.hasNext()) {
@@ -71,6 +75,10 @@ public class ConnectedSocketsVerifier implements Runnable {
 
     public void stop() {
         verify = false;
+    }
+    
+    private void log(String msg){
+//        System.out.println(msg);
     }
 
     public void onNotReachable(String clientKey) {
