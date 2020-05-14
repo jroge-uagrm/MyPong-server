@@ -22,8 +22,8 @@ public class GameClient implements ClientMainThreadEvents {
     private LinkedList<User> playerList;
     private LinkedList<User> partnerList;
     private final Gson gson;
-    private String key, username, password, action;
-    private String roomId;
+    private String myKey, username, password, action;
+    private String myRoomId;
     private final GameActions gameActions;
 
     public GameClient(GameActions gameActions) {
@@ -32,7 +32,7 @@ public class GameClient implements ClientMainThreadEvents {
         gson = new Gson();
         username = "Client";
         action = "";
-        roomId = "";
+        myRoomId = "";
         playerList = new LinkedList<>();
         partnerList = new LinkedList<>();
     }
@@ -46,7 +46,7 @@ public class GameClient implements ClientMainThreadEvents {
     }
 
     public boolean isInRoom() {
-        return !roomId.equals("");
+        return !myRoomId.equals("");
     }
 
     public LinkedList<User> getUserList() {
@@ -58,11 +58,11 @@ public class GameClient implements ClientMainThreadEvents {
     }
 
     public String getKey() {
-        return key;
+        return myKey;
     }
 
     public String getRoomId() {
-        return roomId;
+        return myRoomId;
     }
 
     public boolean sending() {
@@ -90,7 +90,7 @@ public class GameClient implements ClientMainThreadEvents {
     }
 
     public void createRoom() {
-        roomId = "waiting...";
+        myRoomId = "waiting...";
         send(new Protocol("createRoom", ""));
     }
 
@@ -116,7 +116,7 @@ public class GameClient implements ClientMainThreadEvents {
             Protocol protocol = gson.fromJson(x, Protocol.class);
             switch (protocol.action) {
                 case "newKey":
-                    key = protocol.content;
+                    myKey = protocol.content;
                     sendCredentials();
                     break;
                 case "userList":
@@ -140,6 +140,9 @@ public class GameClient implements ClientMainThreadEvents {
                 case "newInvitation":
                     catchInvitation(protocol.content);
                     break;
+                case "rejectedInvitation":
+                    gameActions.showMessageDialog(getUserByKey(protocol.content).username + " has rejected the invitation");
+                    break;
                 case "joinedRoom":
                     verifyPartnerList(protocol.content);
                     break;
@@ -149,8 +152,12 @@ public class GameClient implements ClientMainThreadEvents {
                 case "errorRoom":
                     gameActions.showMessageDialog(protocol.content);
                     break;
+                case "emptyRoom":
+                    myRoomId = "";
+                    gameActions.showMessageDialog(protocol.content);
+                    break;
                 case "deleteRoom":
-                    roomId = "";
+                    myRoomId = "";
                     gameActions.refresh();
                     break;
             }
@@ -171,7 +178,7 @@ public class GameClient implements ClientMainThreadEvents {
     @Override
     public void onClientDisconnected() {
         username = "Client";
-        roomId = "";
+        myRoomId = "";
         action = "";
         gameActions.refresh();
     }
@@ -198,7 +205,7 @@ public class GameClient implements ClientMainThreadEvents {
         playerList = new LinkedList<>();
         User[] newUserList = gson.fromJson(listString, User[].class);
         for (int i = 0; i < newUserList.length; i++) {
-            if (!newUserList[i].key.equals(key)) {
+            if (!newUserList[i].key.equals(myKey)) {
                 playerList.add(newUserList[i]);
             }
         }
@@ -207,6 +214,7 @@ public class GameClient implements ClientMainThreadEvents {
     private void verifyPartnerList(String info) {
         try {
             User[] newUserList = gson.fromJson(info, User[].class);
+            myRoomId = newUserList[0].roomId;
             gameActions.showMessageDialog("Welcome to room");
             partnerList = new LinkedList<>();
             for (int i = 0; i < newUserList.length; i++) {
@@ -214,7 +222,8 @@ public class GameClient implements ClientMainThreadEvents {
             }
         } catch (Exception e) {
             User user = gson.fromJson(info, User.class);
-            if (user.roomId.equals(roomId)) {
+            getUserByKey(user.key).roomId = user.roomId;
+            if (user.roomId.equals(myRoomId)) {
                 partnerList.add(user);
                 gameActions.showMessageDialog(user.username + " has joined to room");
             }
@@ -241,7 +250,7 @@ public class GameClient implements ClientMainThreadEvents {
 
     private void addUser(String userString) {
         User newUser = gson.fromJson(userString, User.class);
-        if (!newUser.key.equals(key)) {
+        if (!newUser.key.equals(myKey)) {
             playerList.add(newUser);
         }
         gameActions.refresh();
@@ -249,38 +258,41 @@ public class GameClient implements ClientMainThreadEvents {
 
     private void removeUser(String userKey) {
         playerList.remove(getUserByKey(userKey));
-        partnerList.remove(getUserByKey(userKey));
+        User userRemoved = getPartnerByKey(userKey);
+        if (partnerList.remove(userRemoved)) {
+            gameActions.showMessageDialog(userRemoved.username + " has left the room");
+        }
     }
 
     private void catchInvitation(String stringUser) {
         User userOwner = gson.fromJson(stringUser, User.class);
         int opt = gameActions.showConfirmDialog(userOwner.username + " has invited you to join a room");
         if (opt == 0) {
-            roomId = userOwner.roomId;
+            myRoomId = userOwner.roomId;
             send(new Protocol("acceptInvitation", userOwner.key));
         } else {
-
+            send(new Protocol("rejectInvitation", userOwner.key));
         }
     }
 
-    private void changePlayerInRoom(String playerKey) {
-        if (playerKey.equals(key)) {
-            roomId = "";
+    private void changePlayerInRoom(String stringUser) {
+        User userLeftRoom = gson.fromJson(stringUser, User.class);
+        if (userLeftRoom.key.equals(myKey)) {
+            myRoomId = "";
             partnerList = new LinkedList<>();
             gameActions.showMessageDialog("You have left the room");
         } else {
-            User user = getUserByKey(playerKey);
-            if (partnerList.contains(user)) {
-                partnerList.remove(user);
-                gameActions.showMessageDialog(user.username + " has left the room");
+            if (partnerList.remove(getPartnerByKey(userLeftRoom.key))) {
+                System.out.println(partnerList.size());
+                gameActions.showMessageDialog(userLeftRoom.username + " has left the room");
             }
-            getUserByKey(user.key).roomId = "";
+            getUserByKey(userLeftRoom.key).roomId = "";
         }
     }
 
     private void send(Protocol protocol) {
         client.send(new ContainerObject(
-                key,
+                myKey,
                 protocol,
                 new String[]{"server"}
         ));
@@ -288,6 +300,15 @@ public class GameClient implements ClientMainThreadEvents {
 
     private User getUserByKey(String key) {
         for (User user : playerList) {
+            if (user.key.equals(key)) {
+                return user;
+            }
+        }
+        return null;
+    }
+
+    private User getPartnerByKey(String key) {
+        for (User user : partnerList) {
             if (user.key.equals(key)) {
                 return user;
             }

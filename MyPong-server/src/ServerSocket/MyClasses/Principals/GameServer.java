@@ -89,122 +89,25 @@ public class GameServer implements ServerMainThreadEvents, ServerClientThreadEve
                 Protocol protocol = gson.fromJson(x, Protocol.class);
                 switch (protocol.action) {
                     case "login":
-                        User userLoggingIn = gson.fromJson(protocol.content, User.class);
-                        User userSaved = getUserByUsername(userLoggingIn.username);
-                        String loginResponse = "";
-                        if (userSaved == null) {
-                            loginResponse = "Username does not exist";
-                        } else if (!userSaved.password.equals(protectPassword(userLoggingIn.password))) {
-                            loginResponse = "Incorrect password";
-                        } else if (!userSaved.key.equals("")) {
-                            loginResponse = "Session already open";
-                        } else {
-                            loginResponse = "OK";
-                            userSaved.key = object.origin;
-                            sendUserList(userSaved);
-                        }
-                        server.send(object.origin, new ContainerObject(
-                                "server",
-                                new Protocol("loginResponse", loginResponse),
-                                new String[]{object.origin}
-                        ));
-                        if (!loginResponse.equals("OK")) {
-                            server.removeClient(object.origin);
-                        }
+                        login(object.origin, gson.fromJson(protocol.content, User.class));
                         break;
                     case "register":
-                        User registerUser = gson.fromJson(protocol.content, User.class);
-                        String registerResponse;
-                        if (registerUser.username.equals("")) {
-                            registerResponse = "Empty username";
-                        } else if (getUserByUsername(registerUser.username) != null) {
-                            registerResponse = "Username already exist";
-                        } else {
-                            registerUser.key = object.origin;
-                            registerUser.password = protectPassword(registerUser.password);
-                            registerUser.roomId = "";
-                            userList.add(registerUser);
-                            registerResponse = "OK";
-                            sendUserList(registerUser);
-                        }
-                        server.send(object.origin, new ContainerObject(
-                                "server",
-                                new Protocol("registerResponse", registerResponse),
-                                new String[]{object.origin}
-                        ));
-                        if (!registerResponse.equals("OK")) {
-                            server.removeClient(object.origin);
-                        }
+                        register(object.origin, gson.fromJson(protocol.content, User.class));
                         break;
                     case "createRoom":
-                        User requesting = getUserByKey(object.origin);
-                        String roomId = requesting.key;
-                        requesting.roomId = roomId;
-                        Room room = new Room(roomId);
-                        room.addPlayer(requesting);
-                        roomList.put(roomId, room);
-                        for (User user : userList) {
-                            String content = gson.toJson(requesting);
-                            if (user.key.equals(requesting.key)) {
-                                content = gson.toJson(room.players);
-                            }
-                            server.send(user.key, new ContainerObject(
-                                    "server",
-                                    new Protocol("joinedRoom", content),
-                                    new String[]{user.key}
-                            ));
-                        }
+                        createRoom(getUserByKey(object.origin));
                         break;
                     case "invite":
-                        User userInvited = getUserByKey(protocol.content);
-                        if (!userInvited.roomId.equals("")) {
-                            server.send(object.origin, new ContainerObject(
-                                    "server",
-                                    new Protocol("errorRoom", "Player is not available"),
-                                    new String[]{object.origin}
-                            ));
-                        } else {
-                            User userOwner = getUserByKey(object.origin);
-                            server.send(userInvited.key, new ContainerObject(
-                                    "server",
-                                    new Protocol("newInvitation", gson.toJson(userOwner)),
-                                    new String[]{userInvited.key}
-                            ));
-                        }
+                        invite(getUserByKey(object.origin), getUserByKey(protocol.content));
                         break;
                     case "acceptInvitation":
-                        User userOwner = getUserByKey(protocol.content);
-                        Room roomToJoin = roomList.get(userOwner.roomId);
-                        User newUserToJoin = getUserByKey(object.origin);
-                        roomToJoin.addPlayer(newUserToJoin);
-                        newUserToJoin.roomId = roomToJoin.id;
-                        for (User user : userList) {
-                            String content = newUserToJoin.key;
-                            if (user.key.equals(newUserToJoin.key)) {
-                                content = gson.toJson(roomToJoin.players);
-                            }
-                            server.send(user.key, new ContainerObject(
-                                    "server",
-                                    new Protocol("joinedRoom", content),
-                                    new String[]{user.key}
-                            ));
-                        }
+                        acceptInvitation(getUserByKey(object.origin), getUserByKey(protocol.content));
+                        break;
+                    case "rejectInvitation":
+                        rejectInvitation(getUserByKey(object.origin), getUserByKey(protocol.content));
                         break;
                     case "leaveRoom":
-                        User userLeavingRoom = getUserByKey(object.origin);
-                        Room userRoom = roomList.get(userLeavingRoom.roomId);
-                        for (User user : userList) {
-                            server.send(user.key, new ContainerObject(
-                                    "server",
-                                    new Protocol("leftRoom", userLeavingRoom.key),
-                                    new String[]{user.key}
-                            ));
-                        }
-                        userRoom.removePlayer(userLeavingRoom);
-                        userLeavingRoom.roomId = "";
-                        if (userRoom.players.isEmpty()) {
-                            roomList.remove(userRoom.id);
-                        }
+                        leaveRoom(getUserByKey(object.origin));
                         break;
                 }
             }
@@ -227,6 +130,142 @@ public class GameServer implements ServerMainThreadEvents, ServerClientThreadEve
         clientsLog(msg);
     }
 
+    private void login(String originKey, User userLoggingIn) {
+        User userSaved = getUserByUsername(userLoggingIn.username);
+        String loginResponse = "";
+        if (userSaved == null) {
+            loginResponse = "Username does not exist";
+        } else if (!userSaved.password.equals(protectPassword(userLoggingIn.password))) {
+            loginResponse = "Incorrect password";
+        } else if (!userSaved.key.equals("")) {
+            loginResponse = "Session already open";
+        } else {
+            loginResponse = "OK";
+            userSaved.key = originKey;
+            sendUserList(userSaved);
+        }
+        server.send(originKey, new ContainerObject(
+                "server",
+                new Protocol("loginResponse", loginResponse),
+                new String[]{originKey}
+        ));
+        if (!loginResponse.equals("OK")) {
+            server.removeClient(originKey);
+        }
+    }
+
+    private void register(String originKey, User registerUser) {
+        String registerResponse;
+        if (registerUser.username.equals("")) {
+            registerResponse = "Empty username";
+        } else if (getUserByUsername(registerUser.username) != null) {
+            registerResponse = "Username already exist";
+        } else {
+            registerUser.key = originKey;
+            registerUser.password = protectPassword(registerUser.password);
+            registerUser.roomId = "";
+            userList.add(registerUser);
+            registerResponse = "OK";
+            sendUserList(registerUser);
+        }
+        server.send(originKey, new ContainerObject(
+                "server",
+                new Protocol("registerResponse", registerResponse),
+                new String[]{originKey}
+        ));
+        if (!registerResponse.equals("OK")) {
+            server.removeClient(originKey);
+        }
+    }
+
+    private void createRoom(User userOwner) {
+        String roomId = protectPassword(userOwner.key);
+        userOwner.roomId = roomId;
+        Room room = new Room(roomId);
+        room.addPlayer(userOwner);
+        roomList.put(roomId, room);
+        for (User user : userList) {
+            String content = gson.toJson(userOwner);
+            if (user.key.equals(userOwner.key)) {
+                content = gson.toJson(room.players);
+            }
+            server.send(user.key, new ContainerObject(
+                    "server",
+                    new Protocol("joinedRoom", content),
+                    new String[]{user.key}
+            ));
+        }
+    }
+
+    private void invite(User userOwner, User userInvited) {
+        if (!userInvited.roomId.equals("")) {
+            server.send(userOwner.key, new ContainerObject(
+                    "server",
+                    new Protocol("errorRoom", "Player is not available"),
+                    new String[]{userOwner.key}
+            ));
+        } else {
+            //Remove in mobile app
+            userInvited.roomId = "pending";
+            server.send(userInvited.key, new ContainerObject(
+                    "server",
+                    new Protocol("newInvitation", gson.toJson(userOwner)),
+                    new String[]{userInvited.key}
+            ));
+        }
+    }
+
+    private void acceptInvitation(User userAccepting, User userOwner) {
+        Room roomToJoin = roomList.get(userOwner.roomId);
+        if (roomToJoin == null) {
+            server.send(userAccepting.key, new ContainerObject(
+                    "server",
+                    new Protocol("emptyRoom", "Room not exist"),
+                    new String[]{userAccepting.key}
+            ));
+        } else {
+            roomToJoin.addPlayer(userAccepting);
+            userAccepting.roomId = roomToJoin.id;
+            for (User user : userList) {
+                String content = gson.toJson(userAccepting);
+                if (user.key.equals(userAccepting.key)) {
+                    content = gson.toJson(roomToJoin.players);
+                }
+                server.send(user.key, new ContainerObject(
+                        "server",
+                        new Protocol("joinedRoom", content),
+                        new String[]{user.key}
+                ));
+            }
+        }
+    }
+
+    private void rejectInvitation(User userRejecting, User userOwner) {
+        getUserByKey(userRejecting.key).roomId = "";
+        server.send(userOwner.key, new ContainerObject(
+                "server",
+                new Protocol("rejectedInvitation", userRejecting.key),
+                new String[]{userOwner.key}
+        ));
+    }
+
+    private void leaveRoom(User userLeaving) {
+        Room userRoom = roomList.get(userLeaving.roomId);
+        userRoom.removePlayer(userLeaving);
+        for (User user : userList) {
+            server.send(user.key, new ContainerObject(
+                    "server",
+                    new Protocol("leftRoom", gson.toJson(userLeaving)),
+                    new String[]{user.key}
+            ));
+        }
+        userLeaving.roomId = "";
+        if (userRoom.players.isEmpty()) {
+            roomList.remove(userRoom.id);
+        }
+    }
+
+    //Auxiliaries
     private void userListRemoveKey(String keyToRemove) {
         //server.removeClient(key);
         for (User user : userList) {
@@ -255,6 +294,12 @@ public class GameServer implements ServerMainThreadEvents, ServerClientThreadEve
     }
 
     private String protectPassword(String plainText) {
+        plainText
+                += Calendar.getInstance().get(Calendar.DAY_OF_YEAR)
+                + Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+                + Calendar.getInstance().get(Calendar.MINUTE)
+                + Calendar.getInstance().get(Calendar.SECOND)
+                + Calendar.getInstance().get(Calendar.MILLISECOND);
         MessageDigest md;
         try {
             md = MessageDigest.getInstance("MD5");
