@@ -17,6 +17,7 @@ import java.util.LinkedList;
 public class GameClient implements ClientMainThreadEvents {
 
     private final Client client;
+    //private final String host = "192.168.43.162";
     private final String host = "192.168.1.117";
     private final int port = 32000;
     private LinkedList<User> playerList;
@@ -100,6 +101,14 @@ public class GameClient implements ClientMainThreadEvents {
 
     public void sendInvitation(int playerIndex) {
         send(new Protocol("invite", playerList.get(playerIndex).key));
+    }
+
+    public void acceptInvitation(String userKey) {
+        send(new Protocol("acceptInvitation", userKey));
+    }
+
+    public void rejectInvitation(String userKey) {
+        send(new Protocol("rejecttInvitation", userKey));
     }
 
     @Override
@@ -214,7 +223,7 @@ public class GameClient implements ClientMainThreadEvents {
     private void verifyPartnerList(String info) {
         try {
             User[] newUserList = gson.fromJson(info, User[].class);
-            myRoomId = newUserList[0].roomId;
+            myRoomId = newUserList[0].matchId;
             gameActions.showMessageDialog("Welcome to room");
             partnerList = new LinkedList<>();
             for (int i = 0; i < newUserList.length; i++) {
@@ -222,8 +231,8 @@ public class GameClient implements ClientMainThreadEvents {
             }
         } catch (Exception e) {
             User user = gson.fromJson(info, User.class);
-            getUserByKey(user.key).roomId = user.roomId;
-            if (user.roomId.equals(myRoomId)) {
+            getUserByKey(user.key).matchId = user.matchId;
+            if (user.matchId.equals(myRoomId)) {
                 partnerList.add(user);
                 gameActions.showMessageDialog(user.username + " has joined to room");
             }
@@ -268,10 +277,10 @@ public class GameClient implements ClientMainThreadEvents {
         User userOwner = gson.fromJson(stringUser, User.class);
         int opt = gameActions.showConfirmDialog(userOwner.username + " has invited you to join a room");
         if (opt == 0) {
-            myRoomId = userOwner.roomId;
-            send(new Protocol("acceptInvitation", userOwner.key));
+            myRoomId = userOwner.matchId;
+            acceptInvitation(userOwner.key);
         } else {
-            send(new Protocol("rejectInvitation", userOwner.key));
+            rejectInvitation(userOwner.key);
         }
     }
 
@@ -286,7 +295,7 @@ public class GameClient implements ClientMainThreadEvents {
                 System.out.println(partnerList.size());
                 gameActions.showMessageDialog(userLeftRoom.username + " has left the room");
             }
-            getUserByKey(userLeftRoom.key).roomId = "";
+            getUserByKey(userLeftRoom.key).matchId = "";
         }
     }
 

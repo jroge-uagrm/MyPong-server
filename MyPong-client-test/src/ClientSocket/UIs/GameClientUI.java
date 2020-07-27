@@ -280,7 +280,7 @@ public class GameClientUI extends javax.swing.JFrame implements GameActions {
         String key = gameClient.getKey();
         for (User user : userList) {
             if (!user.key.equals(key)) {
-                modeloLista.addElement(user.username + (user.roomId.equals("") ? "" : "-PLAYING"));
+                modeloLista.addElement(user.username + (user.matchId.equals("") ? "" : "-PLAYING"));
             }
         }
 

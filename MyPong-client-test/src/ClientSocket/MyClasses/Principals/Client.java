@@ -16,12 +16,8 @@ import ClientSocket.Events.ClientMainThreadEvents;
 public class Client {
 
     private final ClientMainThread clientMainThread;
-    private final String host;
-    private final int port;
 
-    public Client(String newHost, int newPort, ClientMainThreadEvents events) {
-        host = newHost;
-        port = newPort;
+    public Client(String host, int port, ClientMainThreadEvents events) {
         clientMainThread = new ClientMainThread(host, port, events);
     }
 

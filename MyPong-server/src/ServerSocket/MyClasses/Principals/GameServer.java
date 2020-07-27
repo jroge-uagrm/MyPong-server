@@ -7,8 +7,10 @@ package ServerSocket.MyClasses.Principals;
 
 import ServerSocket.Events.ServerClientThreadEvents;
 import ServerSocket.Events.ServerMainThreadEvents;
+import ServerSocket.MyClasses.Auxiliaries.BallConverted;
 import ServerSocket.MyClasses.Auxiliaries.ContainerObject;
 import ServerSocket.MyClasses.Auxiliaries.Protocol;
+import ServerSocket.MyClasses.Auxiliaries.Scoreboard;
 import com.google.gson.Gson;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -26,14 +28,14 @@ public class GameServer implements ServerMainThreadEvents, ServerClientThreadEve
     private final Server server;
     private final int port = 32000;
     private final LinkedList<User> userList;
-    private final HashMap<String, Room> roomList;
+    private final HashMap<String, Match> matchList;
     private final Gson gson;
 
     public GameServer() {
         server = new Server(port, this, this);
         gson = new Gson();
         userList = new LinkedList<>();
-        roomList = new HashMap<>();
+        matchList = new HashMap<>();
     }
 
     public void start() {
@@ -60,7 +62,7 @@ public class GameServer implements ServerMainThreadEvents, ServerClientThreadEve
     @Override
     public void onServerStopped() {
         refresh();
-        roomList.clear();
+        matchList.clear();
     }
 
     @Override
@@ -95,7 +97,7 @@ public class GameServer implements ServerMainThreadEvents, ServerClientThreadEve
                         register(object.origin, gson.fromJson(protocol.content, User.class));
                         break;
                     case "createRoom":
-                        createRoom(getUserByKey(object.origin));
+                        createMatch(getUserByKey(object.origin));
                         break;
                     case "invite":
                         invite(getUserByKey(object.origin), getUserByKey(protocol.content));
@@ -107,7 +109,13 @@ public class GameServer implements ServerMainThreadEvents, ServerClientThreadEve
                         rejectInvitation(getUserByKey(object.origin), getUserByKey(protocol.content));
                         break;
                     case "leaveRoom":
-                        leaveRoom(getUserByKey(object.origin));
+                        leaveMatch(getUserByKey(object.origin));
+                        break;
+                    case "ballMoving":
+                        sendBall(getUserByKey(object.origin), gson.fromJson(protocol.content, BallConverted.class));
+                        break;
+                    case "ballFailed":
+                        updateScoreboard(getUserByKey(object.origin));
                         break;
                 }
             }
@@ -116,7 +124,6 @@ public class GameServer implements ServerMainThreadEvents, ServerClientThreadEve
 
     @Override
     public void onClientDisconnected(String key) {
-        //Al reves
         server.removeClient(key);
         userListRemoveKey(key);
         if (server.isRunning()) {
@@ -163,7 +170,7 @@ public class GameServer implements ServerMainThreadEvents, ServerClientThreadEve
         } else {
             registerUser.key = originKey;
             registerUser.password = protectPassword(registerUser.password);
-            registerUser.roomId = "";
+            registerUser.matchId = "";
             userList.add(registerUser);
             registerResponse = "OK";
             sendUserList(registerUser);
@@ -178,16 +185,16 @@ public class GameServer implements ServerMainThreadEvents, ServerClientThreadEve
         }
     }
 
-    private void createRoom(User userOwner) {
-        String roomId = protectPassword(userOwner.key);
-        userOwner.roomId = roomId;
-        Room room = new Room(roomId);
-        room.addPlayer(userOwner);
-        roomList.put(roomId, room);
+    private void createMatch(User userOwner) {
+        String matchId = protectPassword(userOwner.key);
+        userOwner.matchId = matchId;
+        Match match = new Match(matchId);
+        match.addPlayerA(userOwner);
+        matchList.put(matchId, match);
         for (User user : userList) {
             String content = gson.toJson(userOwner);
             if (user.key.equals(userOwner.key)) {
-                content = gson.toJson(room.players);
+                content = gson.toJson(match.getPlayers());
             }
             server.send(user.key, new ContainerObject(
                     "server",
@@ -198,15 +205,13 @@ public class GameServer implements ServerMainThreadEvents, ServerClientThreadEve
     }
 
     private void invite(User userOwner, User userInvited) {
-        if (!userInvited.roomId.equals("")) {
+        if (!userInvited.matchId.equals("")) {
             server.send(userOwner.key, new ContainerObject(
                     "server",
                     new Protocol("errorRoom", "Player is not available"),
                     new String[]{userOwner.key}
             ));
         } else {
-            //Remove in mobile app
-            userInvited.roomId = "pending";
             server.send(userInvited.key, new ContainerObject(
                     "server",
                     new Protocol("newInvitation", gson.toJson(userOwner)),
@@ -216,20 +221,20 @@ public class GameServer implements ServerMainThreadEvents, ServerClientThreadEve
     }
 
     private void acceptInvitation(User userAccepting, User userOwner) {
-        Room roomToJoin = roomList.get(userOwner.roomId);
-        if (roomToJoin == null) {
+        Match matchToJoin = matchList.get(userOwner.matchId);
+        if (matchToJoin == null) {
             server.send(userAccepting.key, new ContainerObject(
                     "server",
                     new Protocol("emptyRoom", "Room not exist"),
                     new String[]{userAccepting.key}
             ));
         } else {
-            roomToJoin.addPlayer(userAccepting);
-            userAccepting.roomId = roomToJoin.id;
+            matchToJoin.addPlayerB(userAccepting);
+            userAccepting.matchId = matchToJoin.id;
             for (User user : userList) {
                 String content = gson.toJson(userAccepting);
                 if (user.key.equals(userAccepting.key)) {
-                    content = gson.toJson(roomToJoin.players);
+                    content = gson.toJson(matchToJoin.getPlayers());
                 }
                 server.send(user.key, new ContainerObject(
                         "server",
@@ -237,11 +242,13 @@ public class GameServer implements ServerMainThreadEvents, ServerClientThreadEve
                         new String[]{user.key}
                 ));
             }
+            //Start match
+            matchToJoin.startMatch();
         }
     }
 
     private void rejectInvitation(User userRejecting, User userOwner) {
-        getUserByKey(userRejecting.key).roomId = "";
+        getUserByKey(userRejecting.key).matchId = "";
         server.send(userOwner.key, new ContainerObject(
                 "server",
                 new Protocol("rejectedInvitation", userRejecting.key),
@@ -249,9 +256,10 @@ public class GameServer implements ServerMainThreadEvents, ServerClientThreadEve
         ));
     }
 
-    private void leaveRoom(User userLeaving) {
-        Room userRoom = roomList.get(userLeaving.roomId);
-        userRoom.removePlayer(userLeaving);
+    private void leaveMatch(User userLeaving) {
+        Match match = matchList.get(userLeaving.matchId);
+        match.removePlayer(userLeaving);
+        getUserByKey(userLeaving.key).matchId = "";
         for (User user : userList) {
             server.send(user.key, new ContainerObject(
                     "server",
@@ -259,9 +267,70 @@ public class GameServer implements ServerMainThreadEvents, ServerClientThreadEve
                     new String[]{user.key}
             ));
         }
-        userLeaving.roomId = "";
-        if (userRoom.players.isEmpty()) {
-            roomList.remove(userRoom.id);
+        if (match.getPlayers().isEmpty()) {
+            matchList.remove(match.id);
+        } else if (match.getPlayers().size() == 1) {
+            finalizeMatch(match);
+        }
+    }
+
+    private void sendBall(User userSending, BallConverted ball) {
+        Match userMatch = matchList.get(userSending.matchId);
+        User userReceiving = userMatch.getOtherPlayer(userSending);
+        if (userReceiving != null) {
+            server.send(userReceiving.key, new ContainerObject(
+                    "server",
+                    new Protocol("ballMoving", gson.toJson(ball)),
+                    new String[]{userReceiving.key}
+            ));
+        }
+    }
+
+    private void updateScoreboard(User userLostPoint) {
+        Match match = matchList.get(userLostPoint.matchId);
+        if (match != null && match.hasTwoPlayers()) {
+            match.addPoint(userLostPoint);
+            User userWonPoint = match.getOtherPlayer(userLostPoint);
+            Scoreboard scoreboard = new Scoreboard(
+                    match.setsWonPlayerA,
+                    match.setsWonPlayerB,
+                    match.pointsWonPlayerA,
+                    match.pointsWonPlayerB
+            );
+            if (!match.playing) {
+                User winner = match.winner;
+                server.send(userLostPoint.key, new ContainerObject(
+                        "server",
+                        new Protocol("winner", gson.toJson(winner)),
+                        new String[]{userLostPoint.key}
+                ));
+                server.send(userWonPoint.key, new ContainerObject(
+                        "server",
+                        new Protocol("winner", gson.toJson(winner)),
+                        new String[]{userWonPoint.key}
+                ));
+            }
+            server.send(userLostPoint.key, new ContainerObject(
+                    "server",
+                    new Protocol("scoreboard", gson.toJson(scoreboard)),
+                    new String[]{userLostPoint.key}
+            ));
+            server.send(userWonPoint.key, new ContainerObject(
+                    "server",
+                    new Protocol("scoreboard", gson.toJson(scoreboard)),
+                    new String[]{userWonPoint.key}
+            ));
+        }
+    }
+
+    private void finalizeMatch(Match match) {
+        if (match.getPlayers().size() == 1) {
+            User lastPlayer = match.getLastPlayer();
+            server.send(lastPlayer.key, new ContainerObject(
+                    "server",
+                    new Protocol("winner", gson.toJson(lastPlayer)),
+                    new String[]{lastPlayer.key}
+            ));
         }
     }
 
@@ -271,7 +340,7 @@ public class GameServer implements ServerMainThreadEvents, ServerClientThreadEve
         for (User user : userList) {
             if (user.key.equals(keyToRemove)) {
                 user.key = "";
-                user.roomId = "";
+                user.matchId = "";
                 break;
             }
         }
@@ -294,12 +363,12 @@ public class GameServer implements ServerMainThreadEvents, ServerClientThreadEve
     }
 
     private String protectPassword(String plainText) {
-        plainText
+        /*plainText
                 += Calendar.getInstance().get(Calendar.DAY_OF_YEAR)
                 + Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
                 + Calendar.getInstance().get(Calendar.MINUTE)
                 + Calendar.getInstance().get(Calendar.SECOND)
-                + Calendar.getInstance().get(Calendar.MILLISECOND);
+                + Calendar.getInstance().get(Calendar.MILLISECOND);*/
         MessageDigest md;
         try {
             md = MessageDigest.getInstance("MD5");
@@ -308,7 +377,7 @@ public class GameServer implements ServerMainThreadEvents, ServerClientThreadEve
             byte[] encoded = Base64.getEncoder().encode(digest);
             return new String(encoded);
         } catch (NoSuchAlgorithmException ex) {
-            System.out.println(ex.getMessage());
+            //System.out.println(ex.getMessage());
             return "empty";
         }
     }

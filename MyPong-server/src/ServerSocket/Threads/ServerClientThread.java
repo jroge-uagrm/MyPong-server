@@ -8,10 +8,8 @@ package ServerSocket.Threads;
 import ServerSocket.Events.ServerClientThreadEvents;
 import com.google.gson.Gson;
 import ServerSocket.MyClasses.Auxiliaries.ContainerObject;
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
+
+import java.io.*;
 import java.net.Socket;
 
 /**
@@ -22,7 +20,7 @@ public class ServerClientThread implements Runnable {
 
     private final Socket clientSocket;
     private PrintWriter printerWriterOUT;
-    private BufferedReader bufferedReaderIN;
+    private BufferedReader bufferedReaderIN;//DataInputStream
     private boolean connected;
     private final String key;
     private final ServerClientThreadEvents events;
@@ -44,7 +42,12 @@ public class ServerClientThread implements Runnable {
             events.onClientConnected(key);
             while (connected) {
                 content = bufferedReaderIN.readLine();
-                ContainerObject containerObject = gson.fromJson(content, ContainerObject.class);
+                ContainerObject containerObject = null;
+                try {
+                    containerObject = gson.fromJson(content, ContainerObject.class);
+                } catch (Exception e) {
+                    internalLog("Not recognized:" + content);
+                }
                 if (containerObject == null) {
                     throw new IOException();
                 } else {

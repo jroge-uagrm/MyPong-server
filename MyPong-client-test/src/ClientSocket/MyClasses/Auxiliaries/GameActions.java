@@ -13,7 +13,7 @@ public interface GameActions {
 
     public void refresh();
 
-    public void showMessageDialog(String msg);
+    public void showMessageDialog(String message);
     
-    public int showConfirmDialog(String msg);
+    public int showConfirmDialog(String message);
 }
